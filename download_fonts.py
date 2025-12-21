@@ -37,8 +37,8 @@ FONTS_DIR = SCRIPT_DIR / "dist"
 TEMP_DIR = SCRIPT_DIR / ".temp"
 
 # Rate limiting settings
-BASE_DELAY = 2.0  # Base delay between downloads in seconds
-MAX_DELAY = 60.0  # Maximum delay for exponential backoff
+BASE_DELAY = 4.0  # Base delay between downloads in seconds
+MAX_DELAY = 120.0  # Maximum delay for exponential backoff
 JITTER = 0.5  # Random jitter factor (0.5 = ±50%)
 
 # Colors for terminal output
@@ -140,7 +140,7 @@ See the LICENSE file in this directory for full license terms.
 # Download functions
 # ============================================================================
 
-def download_file_with_retry(url: str, dest_path: Path, headers: dict = None, max_retries: int = 3) -> bool:
+def download_file_with_retry(url: str, dest_path: Path, headers: dict = None, max_retries: int = 5) -> bool:
     """Download a file with retry and exponential backoff."""
     for attempt in range(max_retries):
         try:
@@ -169,7 +169,7 @@ def download_file_with_retry(url: str, dest_path: Path, headers: dict = None, ma
                 return False
     return False
 
-def get_json_with_retry(url: str, headers: dict = None, max_retries: int = 3) -> Optional[dict]:
+def get_json_with_retry(url: str, headers: dict = None, max_retries: int = 5) -> Optional[dict]:
     """Fetch JSON from URL with retry."""
     for attempt in range(max_retries):
         try:
@@ -179,12 +179,19 @@ def get_json_with_retry(url: str, headers: dict = None, max_retries: int = 3) ->
         except urllib.error.HTTPError as e:
             if e.code == 429 or e.code >= 500:
                 delay = exponential_backoff(attempt)
+                log_warning(f"API request failed ({e.code}), retrying in {delay:.1f}s...")
                 time.sleep(delay)
+            elif e.code == 403 and "rate limit" in str(e):
+                 delay = exponential_backoff(attempt + 2)
+                 log_warning(f"API rate limit exceeded, backing off {delay:.1f}s...")
+                 time.sleep(delay)
             else:
+                log_error(f"HTTP error {e.code} for {url}")
                 return None
-        except Exception:
+        except Exception as e:
             if attempt < max_retries - 1:
                 delay = exponential_backoff(attempt)
+                log_warning(f"Request failed ({e}), retrying in {delay:.1f}s...")
                 time.sleep(delay)
     return None
 

@@ -33,6 +33,8 @@ jobs:
           pip install fonttools Pillow brotli tqdm
 
       - name: Download fonts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: python download_fonts.py
 
       - name: Build bundle
