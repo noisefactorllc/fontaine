@@ -22,6 +22,7 @@ import base64
 import urllib.request
 import urllib.error
 import io
+import os
 from pathlib import Path
 from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
@@ -48,9 +49,12 @@ SCRIPT_DIR = Path(__file__).parent.resolve()
 DIST_DIR = SCRIPT_DIR / "dist"
 BUNDLE_DIR = SCRIPT_DIR / "bundle"
 CACHE_FILE = SCRIPT_DIR / ".style_cache.json"
-
 # Load OpenAI API key
 OPENAI_KEY_FILE = SCRIPT_DIR / ".openai"
+if OPENAI_KEY_FILE.exists():
+    OPENAI_API_KEY = OPENAI_KEY_FILE.read_text().strip()
+else:
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
 OPENAI_API_KEY = OPENAI_KEY_FILE.read_text().strip() if OPENAI_KEY_FILE.exists() else None
 
 # Valid style tags
