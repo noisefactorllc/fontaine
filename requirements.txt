@@ -1,0 +1,4 @@
+fonttools
+Pillow
+brotli
+tqdm

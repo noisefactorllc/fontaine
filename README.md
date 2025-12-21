@@ -66,15 +66,49 @@ python3 build_bundle.py
 - **Zero dependencies** — Vanilla JS, JSZip loaded dynamically when needed
 - **WOFF2 optimized** — Compressed font format for fast loading
 - **Tag-based filtering** — `core`, `quirky`, `monospace`, `serif`, `handwritten`, etc.
+- **AI Classification** — (Entirely optional) Uses OpenAI Vision to automatically tag fonts by style
 - **Dynamic @font-face** — Register fonts on-demand
+
+## Configuration
+
+**Note:** This step is only required if you are modifying the curated font collection.
+
+Font metadata in the wild is often inconsistent or incorrect. To ensure reliable tagging, we use an AI helper script to visually classify fonts. These generated tags are included in the repo.
+
+To enable AI-powered classification:
+
+1. Set your OpenAI API key:
+   ```bash
+   export OPENAI_API_KEY="sk-..."
+   # or
+   echo "sk-..." > .openai
+   ```
+
+2. Run the classifier:
+   ```bash
+   python3 classify_fonts.py
+   ```
+
+This generates a `style_cache.json` file. You can commit this file to source control so others don't need to run the classification.
+
+### Manual Classification
+
+If you prefer not to use AI, you can create `style_cache.json` manually (see included example).
+
+Valid categories are: `sans-serif`, `serif`, `monospace`, `handwritten`, `display`, `symbols`.
 
 ## Files
 
 | File | Description |
 |------|-------------|
+| `run_demo.sh` | One-click demo script (setup, build, serve) |
 | `download_fonts.py` | Downloads fonts from source (GitHub, Google Fonts) |
+| `classify_fonts.py` | (Optional) Classifies fonts using OpenAI Vision |
 | `build_bundle.py` | Builds distributable bundle with WOFF2 conversion |
+| `build_site.py` | Builds the static site for deployment |
 | `font-loader.js` | Vanilla JS font loader library |
+| `style_cache.json` | Cached font style classifications |
+| `requirements.txt` | Python dependencies |
 | `example.html` | Demo app with progress bar and font browser |
 | `bundle/manifest.json` | Bundle metadata (version, size, hash) |
 | `bundle/fonts.json` | Full catalog with tags and file listings |
@@ -180,11 +214,10 @@ await loader.clearCache();
 
 ## Demo
 
-Run a local server and open `example.html`:
+Run the demo script to set up the environment, build the project, and serve the site:
 
 ```bash
-python3 -m http.server 8000
-# Open http://localhost:8000/example.html
+./run_demo.sh
 ```
 
 ## License

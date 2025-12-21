@@ -37,8 +37,8 @@ FONTS_DIR = SCRIPT_DIR / "dist"
 TEMP_DIR = SCRIPT_DIR / ".temp"
 
 # Rate limiting settings
-BASE_DELAY = 4.0  # Base delay between downloads in seconds
-MAX_DELAY = 120.0  # Maximum delay for exponential backoff
+BASE_DELAY = 8.0  # Base delay between downloads in seconds
+MAX_DELAY = 240.0  # Maximum delay for exponential backoff
 JITTER = 0.5  # Random jitter factor (0.5 = ±50%)
 
 # Colors for terminal output
@@ -459,7 +459,7 @@ FONTS = [
     FontDef("Chivo", "65-chivo", "gfonts", "ofl/chivo", "", "OFL-1.1", "quirky", "sans-serif"),
     FontDef("Syne", "66-syne", "gfonts", "ofl/syne", "", "OFL-1.1", "quirky", "sans-serif"),
     FontDef("Workbench", "67-workbench", "gfonts", "ofl/workbench", "", "OFL-1.1", "quirky", "display"),
-    FontDef("Bungee Inline", "68-bungee-inline", "gfonts", "ofl/bungeeinline", "", "OFL-1.1", "quirky", "display"),
+    FontDef("Press Start 2P", "68-press-start-2p", "gfonts", "ofl/pressstart2p", "", "OFL-1.1", "quirky", "display"),
     FontDef("Orbitron", "69-orbitron", "gfonts", "ofl/orbitron", "", "OFL-1.1", "quirky", "display"),
     FontDef("Audiowide", "70-audiowide", "gfonts", "ofl/audiowide", "", "OFL-1.1", "quirky", "display"),
     FontDef("Bungee", "71-bungee", "gfonts", "ofl/bungee", "", "OFL-1.1", "quirky", "display"),

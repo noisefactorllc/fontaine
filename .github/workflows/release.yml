@@ -38,8 +38,6 @@ jobs:
         run: python download_fonts.py
 
       - name: Build bundle
-        env:
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
         run: python build_bundle.py
 
       - name: Determine version

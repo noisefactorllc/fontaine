@@ -35,12 +35,6 @@ except ImportError:
     print("Error: fontTools required. Install with: pip install fonttools")
     sys.exit(1)
 
-try:
-    from PIL import Image, ImageDraw, ImageFont
-except ImportError:
-    print("Error: Pillow required. Install with: pip install Pillow")
-    sys.exit(1)
-
 # ============================================================================
 # Configuration
 # ============================================================================
@@ -48,14 +42,7 @@ except ImportError:
 SCRIPT_DIR = Path(__file__).parent.resolve()
 DIST_DIR = SCRIPT_DIR / "dist"
 BUNDLE_DIR = SCRIPT_DIR / "bundle"
-CACHE_FILE = SCRIPT_DIR / ".style_cache.json"
-# Load OpenAI API key
-OPENAI_KEY_FILE = SCRIPT_DIR / ".openai"
-if OPENAI_KEY_FILE.exists():
-    OPENAI_API_KEY = OPENAI_KEY_FILE.read_text().strip()
-else:
-    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY")
-OPENAI_API_KEY = OPENAI_KEY_FILE.read_text().strip() if OPENAI_KEY_FILE.exists() else None
+CACHE_FILE = SCRIPT_DIR / "style_cache.json"
 
 # Valid style tags
 VALID_STYLES = ["sans-serif", "serif", "monospace", "handwritten", "display", "symbols"]
@@ -69,164 +56,25 @@ def load_style_cache() -> dict:
     if CACHE_FILE.exists():
         try:
             return json.loads(CACHE_FILE.read_text())
-        except:
+        except Exception as e:
+            print(f"Warning: Failed to load style cache from {CACHE_FILE}: {e}")
             pass
+    else:
+        print(f"Warning: Style cache file not found at {CACHE_FILE}")
     return {}
 
-def save_style_cache(cache: dict):
-    """Save style cache to disk."""
-    CACHE_FILE.write_text(json.dumps(cache, indent=2))
-
-# ============================================================================
-# OpenAI Vision classification
-# ============================================================================
-
-def render_font_sample(font_dir: Path) -> Optional[bytes]:
-    """Render a sample image of the font for classification."""
-    # Find a font file
-    font_file = None
-    for ext in ['.ttf', '.otf']:
-        files = list(font_dir.rglob(f'*{ext}'))
-        # Prefer regular weight
-        for f in files:
-            name_lower = f.stem.lower()
-            if 'regular' in name_lower or 'medium' in name_lower:
-                font_file = f
-                break
-        if not font_file and files:
-            font_file = files[0]
-        if font_file:
-            break
-    
-    # Try .ttc
-    if not font_file:
-        files = list(font_dir.rglob('*.ttc'))
-        if files:
-            font_file = files[0]
-    
-    if not font_file:
-        return None
-    
-    try:
-        # Create image
-        img = Image.new('RGB', (600, 200), color='white')
-        draw = ImageDraw.Draw(img)
-        
-        # Load font
-        try:
-            pil_font = ImageFont.truetype(str(font_file), 48)
-        except:
-            return None
-        
-        # Draw sample text
-        sample_text = "Handgloves 123"
-        draw.text((20, 30), sample_text, font=pil_font, fill='black')
-        
-        # Draw alphabet
-        try:
-            small_font = ImageFont.truetype(str(font_file), 24)
-        except:
-            small_font = pil_font
-        draw.text((20, 100), "ABCDEFGHIJKLMNOPQRSTUVWXYZ", font=small_font, fill='black')
-        draw.text((20, 140), "abcdefghijklmnopqrstuvwxyz", font=small_font, fill='black')
-        
-        # Convert to PNG bytes
-        buffer = io.BytesIO()
-        img.save(buffer, format='PNG')
-        return buffer.getvalue()
-        
-    except Exception as e:
-        print(f"  Error rendering {font_dir.name}: {e}")
-        return None
-
-def classify_with_vision(image_bytes: bytes, font_name: str) -> str:
-    """Use OpenAI Vision API to classify font style."""
-    if not OPENAI_API_KEY:
-        return "sans-serif"
-    
-    # Encode image
-    b64_image = base64.b64encode(image_bytes).decode('utf-8')
-    
-    prompt = f"""This is a sample of the font "{font_name}". Classify it into exactly ONE of these categories:
-- serif: has serifs (small lines/feet at the ends of strokes)
-- sans-serif: no serifs, clean geometric or humanist letterforms
-- monospace: all characters have equal width (like a typewriter)
-- handwritten: looks hand-drawn, script, or cursive
-- display: decorative, stylized, meant for headlines not body text
-- symbols: icons, emoji, musical notation, or math symbols
-
-Respond with ONLY the category name, nothing else."""
-
-    payload = {
-        "model": "gpt-4o-mini",
-        "messages": [
-            {
-                "role": "user",
-                "content": [
-                    {"type": "text", "text": prompt},
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/png;base64,{b64_image}",
-                            "detail": "low"
-                        }
-                    }
-                ]
-            }
-        ],
-        "max_tokens": 20
-    }
-    
-    try:
-        req = urllib.request.Request(
-            "https://api.openai.com/v1/chat/completions",
-            data=json.dumps(payload).encode('utf-8'),
-            headers={
-                "Content-Type": "application/json",
-                "Authorization": f"Bearer {OPENAI_API_KEY}"
-            }
-        )
-        
-        with urllib.request.urlopen(req, timeout=30) as response:
-            result = json.loads(response.read().decode())
-            style = result['choices'][0]['message']['content'].strip().lower()
-            
-            # Validate response
-            if style in VALID_STYLES:
-                return style
-            
-            # Try to extract valid style from response
-            for valid in VALID_STYLES:
-                if valid in style:
-                    return valid
-            
-            return "sans-serif"  # Default
-            
-    except Exception as e:
-        print(f"  Vision API error for {font_name}: {e}")
-        return "sans-serif"
-
 def extract_font_style(font_dir: Path, cache: dict, font_name: str = None) -> str:
-    """Extract font style, using cache or Vision API."""
+    """Extract font style from cache or default to sans-serif."""
     dir_name = font_dir.name
-    display_name = font_name or dir_name
     
     # Check cache first
     if dir_name in cache:
         return cache[dir_name]
     
-    # Use Vision API for all classification
-    print(f"  Classifying {display_name} with Vision API...")
-    image_bytes = render_font_sample(font_dir)
-    if image_bytes:
-        style = classify_with_vision(image_bytes, display_name)
-        cache[dir_name] = style
-        # Small delay to avoid rate limits
-        time.sleep(0.3)
-        return style
-    
-    cache[dir_name] = "sans-serif"
-    return "sans-serif"
+    # Fallback if not in cache
+    print(f"Error: Style for {dir_name} not found in cache.")
+    print("Run 'python3 classify_fonts.py' to generate style cache.")
+    sys.exit(1)
 
 def get_font_number(dir_name: str) -> int:
     """Extract font number from directory name like '01-inter'."""
@@ -498,11 +346,6 @@ def scan_fonts() -> list:
         )
         
         fonts.append(asdict(entry))
-    
-    # Save updated cache
-    if len(style_cache) > cached_count:
-        save_style_cache(style_cache)
-        print(f"  Classified {len(style_cache) - cached_count} new fonts with Vision API")
     
     return fonts
 
