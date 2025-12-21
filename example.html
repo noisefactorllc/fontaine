@@ -222,15 +222,97 @@
       border-radius: 8px;
       margin-bottom: 20px;
     }
+    
+    /* Install prompt */
+    .install-prompt {
+      background: var(--surface);
+      border-radius: 8px;
+      padding: 30px;
+      margin-bottom: 30px;
+      text-align: center;
+    }
+    
+    .install-prompt h2 {
+      margin-top: 0;
+      color: var(--primary);
+    }
+    
+    .install-prompt p {
+      color: var(--text-muted);
+      margin-bottom: 20px;
+    }
+    
+    .btn {
+      background: var(--primary);
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    .btn:hover {
+      opacity: 0.9;
+    }
+    
+    .btn-secondary {
+      background: var(--border);
+      margin-left: 10px;
+    }
+    
+    .btn-danger {
+      background: #6b3030;
+    }
+    
+    .btn-danger:hover {
+      background: #8b4040;
+    }
+    
+    /* Header with source link */
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 10px;
+    }
+    
+    .source-link {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 14px;
+    }
+    
+    .source-link:hover {
+      color: var(--primary);
+    }
   </style>
 </head>
 <body>
   <div class="container">
-    <h1>fontaine</h1>
-    <p class="subtitle">Font loader with async download, IndexedDB caching, and progress tracking</p>
+    <div class="header">
+      <h1>fontaine example page</h1>
+      <a href="https://github.com/noisedeck/fontaine" class="source-link">source</a>
+    </div>
+    <p class="subtitle">A curated set of 100 freely distributable fonts and an async, cache-aware bundler for JavaScript apps.</p>
+
+    <p>This example will install the bundle to your browser. Don't forget to uninstall afterwards, because it's only useful for this demo!</p>
+    
+    <!-- Install Prompt -->
+    <div id="install-prompt" class="install-prompt" style="display: none;">
+      <h2>Install Font Bundle</h2>
+      <p>This will download approximately <strong>140 MB</strong> of fonts to your browser's cache.</p>
+      <button id="install-btn" class="btn">Install Fonts</button>
+    </div>
+    
+    <!-- Uninstall option -->
+    <div id="uninstall-container" style="display: none; margin-bottom: 20px;">
+      <button id="uninstall-btn" class="btn btn-danger">Uninstall Fonts</button>
+    </div>
     
     <!-- Progress -->
-    <div id="progress-container" class="progress-container">
+    <div id="progress-container" class="progress-container" style="display: none;">
       <div class="progress-bar">
         <div id="progress-fill" class="progress-fill"></div>
       </div>
@@ -289,19 +371,39 @@
     let searchQuery = '';
     
     // Progress handling
+    function showProgress() {
+      document.getElementById('progress-container').style.display = 'block';
+    }
+    
     function updateProgress(percent, message) {
       document.getElementById('progress-fill').style.width = `${percent}%`;
       document.getElementById('progress-text').textContent = message;
     }
     
     function hideProgress() {
-      document.getElementById('progress-container').classList.add('hidden');
+      document.getElementById('progress-container').style.display = 'none';
     }
     
     function showError(message) {
       const el = document.getElementById('error');
       el.textContent = message;
       el.style.display = 'block';
+    }
+    
+    function showInstallPrompt() {
+      document.getElementById('install-prompt').style.display = 'block';
+    }
+    
+    function hideInstallPrompt() {
+      document.getElementById('install-prompt').style.display = 'none';
+    }
+    
+    function showUninstallOption() {
+      document.getElementById('uninstall-container').style.display = 'block';
+    }
+    
+    function hideUninstallOption() {
+      document.getElementById('uninstall-container').style.display = 'none';
     }
     
     // Render font cards
@@ -398,9 +500,10 @@
       document.getElementById('filters').style.display = 'flex';
     }
     
-    // Main init
-    async function init() {
-      loader = new FontLoader();
+    // Load fonts (after user confirms or from cache)
+    async function loadFonts() {
+      showProgress();
+      hideInstallPrompt();
       
       try {
         const updated = await loader.load('./bundle', {
@@ -415,6 +518,7 @@
         
         hideProgress();
         showUI();
+        showUninstallOption();
         
         allFonts = loader.getAllFonts();
         updateStats();
@@ -426,7 +530,54 @@
         
       } catch (error) {
         console.error('Failed to load fonts:', error);
+        hideProgress();
         showError(`Failed to load fonts: ${error.message}`);
+      }
+    }
+    
+    // Uninstall fonts
+    async function uninstallFonts() {
+      if (!confirm('Are you sure you want to uninstall all cached fonts?')) {
+        return;
+      }
+      
+      try {
+        await loader.clearCache();
+        hideUninstallOption();
+        document.getElementById('stats').style.display = 'none';
+        document.getElementById('search').style.display = 'none';
+        document.getElementById('filters').style.display = 'none';
+        document.getElementById('font-grid').innerHTML = '';
+        showInstallPrompt();
+      } catch (error) {
+        console.error('Failed to uninstall fonts:', error);
+        showError(`Failed to uninstall fonts: ${error.message}`);
+      }
+    }
+    
+    // Main init
+    async function init() {
+      loader = new FontLoader();
+      
+      // Setup button handlers
+      document.getElementById('install-btn').addEventListener('click', loadFonts);
+      document.getElementById('uninstall-btn').addEventListener('click', uninstallFonts);
+      
+      try {
+        // Check if fonts are already installed
+        const installedVersion = await loader.getInstalledVersion();
+        
+        if (installedVersion) {
+          // Fonts already cached, load them
+          await loadFonts();
+        } else {
+          // Show install prompt
+          showInstallPrompt();
+        }
+        
+      } catch (error) {
+        console.error('Failed to check font status:', error);
+        showError(`Failed to initialize: ${error.message}`);
       }
     }
     

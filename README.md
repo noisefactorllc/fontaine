@@ -4,6 +4,8 @@
 
 By [Noise Factor](https://noisefactor.io/)
 
+🌐 **[Live Demo](https://fonts.noisedeck.app/)**
+
 ## Fonts
 
 **50 Core Fonts** (1-50) — Classic, reliable, workhorse fonts
