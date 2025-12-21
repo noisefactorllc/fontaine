@@ -410,17 +410,24 @@ class FontLoader {
 
   /**
    * Clear all cached fonts and data.
+   * Deletes the entire IndexedDB database.
    */
   async clearCache() {
-    const db = await this.openDB();
+    // Close existing connection
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
     
+    // Delete the entire database
     await new Promise((resolve, reject) => {
-      const tx = db.transaction(['meta', 'fonts', 'files'], 'readwrite');
-      tx.objectStore('meta').clear();
-      tx.objectStore('fonts').clear();
-      tx.objectStore('files').clear();
-      tx.oncomplete = () => resolve();
-      tx.onerror = () => reject(tx.error);
+      const request = indexedDB.deleteDatabase(this.dbName);
+      request.onsuccess = () => resolve();
+      request.onerror = () => reject(request.error);
+      request.onblocked = () => {
+        console.warn('Database deletion blocked - closing connections');
+        resolve(); // Continue anyway
+      };
     });
     
     this.installedVersion = null;
