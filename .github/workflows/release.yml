@@ -117,3 +117,32 @@ jobs:
             release/font-loader.js
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Prepare S3 bundle directory
+        run: |
+          mkdir -p dist/bundle
+          cp bundle/fonts.zip dist/bundle/
+          cp bundle/fonts.json dist/bundle/
+          cp bundle/manifest.json dist/bundle/
+          cp font-loader.js dist/bundle/
+
+      - name: Sync bundle to S3
+        uses: noisedeck/s3-sync-action@master
+        with:
+          args: --follow-symlinks
+        env:
+          AWS_S3_BUCKET: 'noisedeck-fonts'
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_REGION: 'us-east-1'
+          SOURCE_DIR: 'dist/bundle'
+          DEST_DIR: 'bundle'
+
+      - name: Invalidate CloudFront cache for bundles
+        uses: noisedeck/invalidate-cloudfront-action@master
+        env:
+          DISTRIBUTION: 'E14WURW4E0YYTW'
+          PATHS: '/bundle/*'
+          AWS_REGION: 'us-east-1'
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
