@@ -5,6 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>fontaine - Example App</title>
   <style>
+    @font-face {
+      font-family: Nunito;
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+      src: url('https://fonts.noisedeck.app/fonts/nunito/Nunito[wght].woff2') format('woff2');
+    }
+
     :root {
       --bg: #1a1a2e;
       --surface: #16213e;
@@ -19,12 +27,18 @@
     }
     
     body {
-      font-family: system-ui, -apple-system, sans-serif;
+      font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+      font-weight: 500;
       background: var(--bg);
       color: var(--text);
       margin: 0;
       padding: 20px;
       min-height: 100vh;
+    }
+
+    button, .btn {
+      font-family: inherit;
+      font-weight: 500;
     }
     
     .container {

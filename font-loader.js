@@ -314,6 +314,51 @@ class FontLoader {
   }
 
   /**
+   * Check if a filename indicates an italic variant.
+   * @param {string} filename - Font filename
+   * @returns {boolean} True if italic
+   */
+  isItalicVariant(filename) {
+    return /italic/i.test(filename);
+  }
+
+  /**
+   * Check if a filename indicates a regular/normal weight variant.
+   * @param {string} filename - Font filename
+   * @returns {boolean} True if regular weight
+   */
+  isRegularWeight(filename) {
+    const name = filename.toLowerCase();
+    // Prefer Regular, Normal, or files without weight modifiers
+    if (/regular|normal/i.test(name)) return true;
+    // Exclude bold, light, thin, black, medium, etc.
+    if (/bold|light|thin|black|medium|heavy|semi|extra|ultra/i.test(name)) return false;
+    return true;
+  }
+
+  /**
+   * Find the best font file for preview (prefer regular, non-italic).
+   * @param {Array} files - Array of font file objects
+   * @param {string} extension - Preferred extension (e.g., '.woff2')
+   * @returns {Object|null} Best matching file or null
+   */
+  findBestPreviewFile(files, extension) {
+    const extPattern = new RegExp(`\\${extension}$`, 'i');
+    const matching = files.filter(f => extPattern.test(f.filename));
+    
+    // Priority 1: Regular weight, non-italic
+    let file = matching.find(f => this.isRegularWeight(f.filename) && !this.isItalicVariant(f.filename));
+    if (file) return file;
+    
+    // Priority 2: Any non-italic
+    file = matching.find(f => !this.isItalicVariant(f.filename));
+    if (file) return file;
+    
+    // Priority 3: Any file with the extension
+    return matching[0] || null;
+  }
+
+  /**
    * Get a font file as a Blob URL (for use in CSS).
    * @param {string} fontId - Font ID
    * @param {string} filename - Specific file (optional, uses first available)
@@ -323,15 +368,15 @@ class FontLoader {
     const font = this.getFont(fontId);
     if (!font) return null;
 
-    // Find the file - prefer WOFF2
+    // Find the file - prefer WOFF2, regular weight, non-italic
     let file;
     if (filename) {
       file = font.files.find(f => f.filename === filename);
     } else {
-      file = font.files.find(f => /\.woff2$/i.test(f.filename)) ||
-             font.files.find(f => /variable/i.test(f.filename) && /\.(ttf|otf)$/i.test(f.filename)) ||
-             font.files.find(f => /\.(ttf|otf)$/i.test(f.filename)) ||
-             font.files.find(f => /\.woff$/i.test(f.filename));
+      file = this.findBestPreviewFile(font.files, '.woff2') ||
+             this.findBestPreviewFile(font.files, '.ttf') ||
+             this.findBestPreviewFile(font.files, '.otf') ||
+             this.findBestPreviewFile(font.files, '.woff');
     }
 
     if (!file) return null;
@@ -357,11 +402,11 @@ class FontLoader {
 
     fontFamily = fontFamily || font.name;
 
-    // Find best font file - prefer WOFF2
-    const file = font.files.find(f => /\.woff2$/i.test(f.filename)) ||
-                 font.files.find(f => /variable/i.test(f.filename) && /\.(ttf|otf)$/i.test(f.filename)) ||
-                 font.files.find(f => /\.(ttf|otf)$/i.test(f.filename)) ||
-                 font.files.find(f => /\.woff$/i.test(f.filename));
+    // Find best font file - prefer WOFF2, regular weight, non-italic
+    const file = this.findBestPreviewFile(font.files, '.woff2') ||
+                 this.findBestPreviewFile(font.files, '.ttf') ||
+                 this.findBestPreviewFile(font.files, '.otf') ||
+                 this.findBestPreviewFile(font.files, '.woff');
 
     if (!file) return false;
 
