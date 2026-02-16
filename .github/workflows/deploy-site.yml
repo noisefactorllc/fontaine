@@ -22,6 +22,29 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: Install dependencies
+        run: pip install fonttools brotli tqdm
+
+      - name: Cache font downloads
+        uses: actions/cache@v4
+        with:
+          path: |
+            dist
+            .build
+          key: fonts-${{ hashFiles('download_fonts.py') }}
+
+      - name: Download fonts
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python download_fonts.py
+
+      - name: Convert to WOFF2
+        run: |
+          python -c "
+          from build_bundle import build_woff2_fonts
+          build_woff2_fonts()
+          "
+
       - name: Build site bundle
         run: python build_site.py
 
