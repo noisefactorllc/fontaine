@@ -1,6 +1,6 @@
 # Fontaine Web Fonts
 
-Fontaine fonts are hosted at `fonts.noisedeck.app` for use in Noise Factor web applications.
+Fontaine fonts are hosted at `fonts.noisefactor.io` for use in Noise Factor web applications.
 
 ## Updating Fonts in S3
 
@@ -34,7 +34,7 @@ Define `@font-face` rules in your CSS:
   font-style: normal;
   font-weight: 400;
   font-display: swap;
-  src: url('https://fonts.noisedeck.app/fonts/inter/Inter-Regular.woff2') format('woff2');
+  src: url('https://fonts.noisefactor.io/fonts/inter/Inter-Regular.woff2') format('woff2');
 }
 
 @font-face {
@@ -42,7 +42,7 @@ Define `@font-face` rules in your CSS:
   font-style: normal;
   font-weight: 700;
   font-display: swap;
-  src: url('https://fonts.noisedeck.app/fonts/inter/Inter-Bold.woff2') format('woff2');
+  src: url('https://fonts.noisefactor.io/fonts/inter/Inter-Bold.woff2') format('woff2');
 }
 
 body {
@@ -54,13 +54,13 @@ body {
 
 Fonts follow the pattern:
 ```
-https://fonts.noisedeck.app/fonts/{fontname}/{Filename}.woff2
+https://fonts.noisefactor.io/fonts/{fontname}/{Filename}.woff2
 ```
 
 Examples:
-- `https://fonts.noisedeck.app/fonts/inter/Inter-Regular.woff2`
-- `https://fonts.noisedeck.app/fonts/roboto/Roboto-Regular.woff2`
-- `https://fonts.noisedeck.app/fonts/jetbrains-mono/JetBrainsMono-Regular.woff2`
+- `https://fonts.noisefactor.io/fonts/inter/Inter-Regular.woff2`
+- `https://fonts.noisefactor.io/fonts/roboto/Roboto-Regular.woff2`
+- `https://fonts.noisefactor.io/fonts/jetbrains-mono/JetBrainsMono-Regular.woff2`
 
 Font directory names use lowercase with hyphens (no numbers).
 
@@ -70,7 +70,7 @@ For performance, preload fonts used above the fold:
 
 ```html
 <link rel="preload" 
-      href="https://fonts.noisedeck.app/fonts/inter/Inter-Regular.woff2" 
+      href="https://fonts.noisefactor.io/fonts/inter/Inter-Regular.woff2" 
       as="font" 
       type="font/woff2" 
       crossorigin>
@@ -82,7 +82,7 @@ Many fonts include variable font versions (when available):
 
 ```html
 <link rel="preload" 
-      href="https://fonts.noisedeck.app/fonts/inter/InterVariable.woff2" 
+      href="https://fonts.noisefactor.io/fonts/inter/InterVariable.woff2" 
       as="font" 
       type="font/woff2" 
       crossorigin>

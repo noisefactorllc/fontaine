@@ -136,7 +136,7 @@ jobs:
         run: |
           rsync -avz \
             dist/bundle/ \
-            deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisedeck.app/content/bundle/
+            deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisefactor.io/content/bundle/
 
       - name: Configure AWS credentials
         uses: aws-actions/configure-aws-credentials@v4

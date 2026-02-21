@@ -4,7 +4,7 @@
 
 By [Noise Factor](https://noisefactor.io/)
 
-[Live Demo](https://fonts.noisedeck.app/)
+[Live Demo](https://fonts.noisefactor.io/)
 
 ## Fonts
 
