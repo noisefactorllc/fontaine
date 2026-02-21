@@ -58,6 +58,6 @@ jobs:
 
       - name: Deploy site to scaffold
         run: |
-          rsync -avz --delete --exclude 'bundle/' \
+          rsync -avz --exclude 'bundle/' \
             dist/site/ \
             deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisedeck.app/content/
