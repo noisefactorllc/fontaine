@@ -70,23 +70,23 @@ jobs:
           FONT_COUNT=$(jq '.total_fonts' bundle/manifest.json)
           BUNDLE_SIZE=$(jq '.bundle_size' bundle/manifest.json)
           BUNDLE_SIZE_MB=$(echo "scale=1; $BUNDLE_SIZE / 1048576" | bc)
-          
+
           cat << EOF > release_notes.md
           ## fontaine v${{ steps.version.outputs.version }}
-          
+
           A curated collection of freely distributable web fonts with an async, cache-aware loader.
-          
+
           ### Bundle Info
           - **Fonts:** $FONT_COUNT
           - **Bundle Size:** ${BUNDLE_SIZE_MB} MB
-          
+
           ### Files
           - \`fontaine-${{ steps.version.outputs.version }}.zip\` - Complete release bundle
           - \`fontaine-${{ steps.version.outputs.version }}-fonts.zip\` - Font files only (WOFF2)
           - \`fonts.json\` - Font catalog with metadata
           - \`manifest.json\` - Bundle manifest
           - \`font-loader.js\` - JavaScript font loader
-          
+
           ### Quick Start
           \`\`\`html
           <script src="font-loader.js"></script>
@@ -95,7 +95,7 @@ jobs:
             await loader.load('./bundle');
           </script>
           \`\`\`
-          
+
           See [README.md](https://github.com/${{ github.repository }}/blob/main/README.md) for full documentation.
           EOF
 
@@ -136,23 +136,4 @@ jobs:
         run: |
           rsync -avz \
             dist/bundle/ \
-            deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisefactor.io/content/bundle/
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: us-east-1
-
-      - name: Sync bundle to S3
-        run: |
-          aws s3 sync dist/bundle/ s3://noisedeck-fonts/bundle/ \
-            --cache-control "public, max-age=300" \
-            --delete
-
-      - name: Invalidate CloudFront cache
-        run: |
-          aws cloudfront create-invalidation \
-            --distribution-id ${{ secrets.FONTS_CF_DISTRIBUTION_ID }} \
-            --paths "/bundle/*"
+            deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisedeck.app/content/bundle/
