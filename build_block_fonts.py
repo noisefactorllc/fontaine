@@ -5,6 +5,11 @@ Reads WOFF2 fonts from .build/ and generates block font variants where
 every glyph is a solid rectangle with identical metrics to the source.
 Output goes to .build-block/ for S3 sync.
 
+For variable fonts, instantiates at each weight used across Noise Factor
+sites, extracts exact advance widths, then builds a variable block font
+with correct gvar phantom point deltas so advance widths match at ALL
+weight values.
+
 Copyright (c) 2025 Noise Factor (https://noisefactor.io/)
 MIT License
 """
@@ -17,6 +22,8 @@ try:
     from fontTools.ttLib import TTFont, newTable
     from fontTools.ttLib.tables._g_l_y_f import Glyph
     from fontTools.pens.ttGlyphPen import TTGlyphPen
+    from fontTools.varLib.instancer import instantiateVariableFont
+    from fontTools.ttLib.tables._g_v_a_r import TupleVariation
 except ImportError:
     print("Error: fontTools required. Install with: pip install fonttools")
     sys.exit(1)
@@ -34,8 +41,8 @@ BLOCK_DIR = SCRIPT_DIR / ".build-block"
 # Tables to remove (not needed for metric-only block fonts)
 STRIP_TABLES = [
     "GPOS", "GSUB", "GDEF",   # OpenType layout
-    "fvar", "gvar", "avar",    # Variable font axes
-    "STAT", "HVAR", "MVAR",    # Variable font metrics
+    "HVAR",                     # Replaced by gvar phantom point deltas
+    "MVAR",                     # Metric variations
     "cvar",                     # Variable font hints
     "fpgm", "prep", "cvt ",   # TrueType hinting
     "gasp",                     # Grid-fitting
@@ -65,10 +72,35 @@ def make_block_glyph(pen, advance_width, ascender, descender):
     pen.closePath()
 
 
+def get_advance_widths_at_weight(src_path, weight):
+    """Instantiate variable font at a specific weight and return all advance widths."""
+    font = TTFont(src_path)
+    instantiateVariableFont(font, {"wght": weight}, inplace=True)
+    hmtx = font["hmtx"]
+    widths = {}
+    for glyph_name in font.getGlyphOrder():
+        widths[glyph_name] = hmtx[glyph_name][0]
+    font.close()
+    return widths
+
+
 def build_block_font(src_path: Path, dest_path: Path) -> bool:
     """Generate a block font from a source font file."""
     try:
         font = TTFont(src_path)
+
+        # Check if this is a variable font with weight axis
+        is_variable = "fvar" in font
+        has_weight_axis = False
+        weight_min = weight_max = weight_default = 400
+        if is_variable:
+            for axis in font["fvar"].axes:
+                if axis.axisTag == "wght":
+                    has_weight_axis = True
+                    weight_min = axis.minValue
+                    weight_max = axis.maxValue
+                    weight_default = axis.defaultValue
+                    break
 
         # Read font-level metrics
         ascender = font["OS/2"].sTypoAscender
@@ -76,15 +108,58 @@ def build_block_font(src_path: Path, dest_path: Path) -> bool:
 
         # Determine if CFF or TrueType outlines
         is_cff = "CFF " in font or "CFF2" in font
-        glyf_table = None if is_cff else font.get("glyf")
 
-        # Get glyph order and metrics
+        # Get glyph order and default metrics
         glyph_order = font.getGlyphOrder()
         hmtx = font["hmtx"]
 
+        # For variable fonts: extract per-glyph advance width deltas from HVAR
+        # to build matching gvar phantom point entries
+        hvar_regions = []
+        hvar_glyph_deltas = {}  # glyph_name -> list of deltas per region
+        if is_variable and has_weight_axis and "HVAR" in font:
+            hvar = font["HVAR"].table
+            vs = hvar.VarStore
+
+            # Extract region definitions (in normalized coordinates)
+            for region in vs.VarRegionList.Region:
+                for ar in region.VarRegionAxis:
+                    if ar.PeakCoord != 0:
+                        hvar_regions.append({
+                            "start": ar.StartCoord,
+                            "peak": ar.PeakCoord,
+                            "end": ar.EndCoord,
+                        })
+
+            # Extract per-glyph deltas from HVAR
+            adv_map = hvar.AdvWidthMap
+            for glyph_name in glyph_order:
+                if adv_map is not None and glyph_name in adv_map.mapping:
+                    packed = adv_map.mapping[glyph_name]
+                    outer = packed >> 16
+                    inner = packed & 0xFFFF
+                else:
+                    outer = 0
+                    inner = glyph_order.index(glyph_name)
+
+                if outer < len(vs.VarData):
+                    vd = vs.VarData[outer]
+                    if inner < vd.ItemCount:
+                        deltas = list(vd.Item[inner])
+                        # Reorder deltas to match region order (VarData has VarRegionIndex)
+                        ordered = [0] * len(hvar_regions)
+                        for d_idx, r_idx in enumerate(vd.VarRegionIndex):
+                            if d_idx < len(deltas):
+                                ordered[r_idx] = deltas[d_idx]
+                        if any(d != 0 for d in ordered):
+                            hvar_glyph_deltas[glyph_name] = ordered
+
+        # Strip gvar before rebuilding glyphs (we'll build our own)
+        if "gvar" in font:
+            del font["gvar"]
+
         if is_cff:
-            # For CFF fonts, rebuild with TrueType outlines (simpler rectangles)
-            # Remove CFF tables and add glyf/loca
+            # For CFF fonts, rebuild with TrueType outlines
             for table_tag in ["CFF ", "CFF2"]:
                 if table_tag in font:
                     del font[table_tag]
@@ -93,11 +168,9 @@ def build_block_font(src_path: Path, dest_path: Path) -> bool:
             font["glyf"].glyphs = {}
             font["glyf"].glyphOrder = glyph_order
             font["loca"] = newTable("loca")
-
-            # Update head table for TrueType
             font["head"].glyphDataFormat = 0
 
-            glyf_table = font["glyf"]
+        glyf_table = font["glyf"]
 
         # Replace each glyph with a solid rectangle
         for glyph_name in glyph_order:
@@ -109,6 +182,55 @@ def build_block_font(src_path: Path, dest_path: Path) -> bool:
             ttpen = TTGlyphPen(None)
             make_block_glyph(ttpen, advance_width, ascender, descender)
             glyf_table[glyph_name] = ttpen.glyph()
+
+        # For variable fonts: build gvar with phantom point deltas for advance widths
+        if is_variable and has_weight_axis and hvar_glyph_deltas:
+            from fontTools.ttLib.tables._g_v_a_r import table__g_v_a_r
+
+            gvar = table__g_v_a_r()
+            gvar.version = 1
+            gvar.reserved = 0
+            gvar.variations = {}
+
+            for glyph_name in glyph_order:
+                glyph = glyf_table.get(glyph_name)
+                if glyph is None or not hasattr(glyph, "numberOfContours"):
+                    gvar.variations[glyph_name] = []
+                    continue
+
+                deltas = hvar_glyph_deltas.get(glyph_name)
+                if not deltas:
+                    gvar.variations[glyph_name] = []
+                    continue
+
+                # Count actual outline points
+                n_contour = glyph.numberOfContours if glyph.numberOfContours > 0 else 0
+                if n_contour > 0:
+                    n_points = max(glyph.endPtsOfContours) + 1
+                else:
+                    n_points = 0
+
+                # Build one TupleVariation per HVAR region
+                tvs = []
+                for region_idx, region in enumerate(hvar_regions):
+                    adv_delta = deltas[region_idx] if region_idx < len(deltas) else 0
+                    if adv_delta == 0:
+                        continue
+
+                    # Phantom points: 4 after outline points
+                    # [0]=LSB origin, [1]=advance width, [2]=TSB, [3]=vert advance
+                    coords = [(0, 0)] * n_points  # outline points: no change
+                    coords.append((0, 0))          # phantom 0: LSB origin
+                    coords.append((adv_delta, 0))  # phantom 1: advance width delta
+                    coords.append((0, 0))          # phantom 2: TSB origin
+                    coords.append((0, 0))          # phantom 3: vert advance
+
+                    axes = {"wght": (region["start"], region["peak"], region["end"])}
+                    tvs.append(TupleVariation(axes, coords))
+
+                gvar.variations[glyph_name] = tvs
+
+            font["gvar"] = gvar
 
         # Strip unnecessary tables
         for table_tag in STRIP_TABLES:
@@ -123,7 +245,9 @@ def build_block_font(src_path: Path, dest_path: Path) -> bool:
         return True
 
     except Exception as e:
+        import traceback
         print(f"  FAILED: {src_path.name}: {e}")
+        traceback.print_exc()
         return False
 
 
