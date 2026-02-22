@@ -64,4 +64,4 @@ jobs:
         run: |
           rsync -avz --exclude 'bundle/' \
             dist/site/ \
-            deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisedeck.app/content/
+            deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisefactor.io/content/
