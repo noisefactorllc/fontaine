@@ -59,9 +59,9 @@ def make_block_glyph(pen, advance_width, ascender, descender):
     if advance_width == 0:
         return
     pen.moveTo((0, descender))
-    pen.lineTo((advance_width, descender))
-    pen.lineTo((advance_width, ascender))
     pen.lineTo((0, ascender))
+    pen.lineTo((advance_width, ascender))
+    pen.lineTo((advance_width, descender))
     pen.closePath()
 
 
