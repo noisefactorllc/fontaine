@@ -32,7 +32,7 @@ jobs:
             dist
             .build
             .build-block
-          key: fonts-${{ hashFiles('download_fonts.py') }}
+          key: fonts-${{ hashFiles('download_fonts.py', 'build_block_fonts.py') }}
 
       - name: Download fonts
         env:
