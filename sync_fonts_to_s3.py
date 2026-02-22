@@ -26,6 +26,7 @@ S3_BUCKET = "s3://noisedeck-fonts"
 S3_PREFIX = "fonts"
 SCRIPT_DIR = Path(__file__).parent.resolve()
 BUILD_DIR = SCRIPT_DIR / ".build"
+BLOCK_DIR = SCRIPT_DIR / ".build-block"
 
 # Colors for terminal output
 class Colors:
@@ -141,11 +142,41 @@ def main():
     
     print()
     log_success(f"Synced {font_count} fonts to {S3_BUCKET}/{S3_PREFIX}/")
-    
+
+    # Sync block fonts (same S3 prefix, merged into font directories)
+    if BLOCK_DIR.exists():
+        print()
+        log_info(f"Syncing block fonts from {BLOCK_DIR.name}/\n")
+
+        block_count = 0
+        block_failed = 0
+
+        for font_dir in sorted(BLOCK_DIR.iterdir()):
+            if not font_dir.is_dir():
+                continue
+
+            woff2_files = list(font_dir.glob("*.woff2"))
+            if not woff2_files:
+                continue
+
+            font_name = strip_number_prefix(font_dir.name)
+            log_info(f"Syncing {font_name}/ (block)")
+
+            if sync_font_to_s3(font_dir, font_name, args.dry_run):
+                block_count += 1
+            else:
+                block_failed += 1
+
+        log_success(f"Synced {block_count} block fonts")
+
+        if block_failed > 0:
+            log_error(f"{block_failed} block fonts failed to sync")
+            failed_count += block_failed
+
     if failed_count > 0:
         log_error(f"{failed_count} fonts failed to sync")
         sys.exit(1)
-    
+
     if args.dry_run:
         print(f"{Colors.YELLOW}[NOTE]{Colors.NC} This was a dry run. Remove --dry-run to upload files.")
 
