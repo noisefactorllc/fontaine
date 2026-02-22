@@ -69,6 +69,25 @@ def build_site():
     else:
         print("⚠ .build/ not found - skipping web fonts")
 
+    # Copy block fonts from .build-block/ into fonts/<name>/
+    block_dir = script_dir / ".build-block"
+    if block_dir.exists():
+        import re
+        fonts_dir = dist_dir / "fonts"
+        count = 0
+        for font_dir in sorted(block_dir.iterdir()):
+            if not font_dir.is_dir():
+                continue
+            name = re.sub(r'^\d+-', '', font_dir.name)
+            dest = fonts_dir / name
+            dest.mkdir(parents=True, exist_ok=True)
+            for woff2 in font_dir.glob("*.woff2"):
+                shutil.copy2(woff2, dest / woff2.name)
+                count += 1
+        print(f"✓ Copied {count} block font files to {fonts_dir}")
+    else:
+        print("⚠ .build-block/ not found - skipping block fonts")
+
 
 if __name__ == "__main__":
     build_site()

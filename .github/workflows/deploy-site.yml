@@ -31,6 +31,7 @@ jobs:
           path: |
             dist
             .build
+            .build-block
           key: fonts-${{ hashFiles('download_fonts.py') }}
 
       - name: Download fonts
@@ -44,6 +45,9 @@ jobs:
           from build_bundle import build_woff2_fonts
           build_woff2_fonts()
           "
+
+      - name: Build block fonts
+        run: python build_block_fonts.py
 
       - name: Build site bundle
         run: python build_site.py
