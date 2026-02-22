@@ -13,10 +13,13 @@ python download_fonts.py
 # 2. Build woff2 files
 python build_bundle.py
 
-# 3. Preview what will be synced (optional)
+# 3. Build block fonts (zero-CLS placeholders)
+python build_block_fonts.py
+
+# 4. Preview what will be synced (optional)
 python sync_fonts_to_s3.py --dry-run
 
-# 4. Push fonts to S3
+# 5. Push fonts to S3
 python sync_fonts_to_s3.py
 ```
 
@@ -87,6 +90,43 @@ Many fonts include variable font versions (when available):
       type="font/woff2" 
       crossorigin>
 ```
+
+## Block Fonts (Zero-CLS Loading)
+
+Block fonts are metric-matched placeholder fonts where every glyph is a solid rectangle.
+They load near-instantly (~3-15KB) and prevent layout shift when the real font loads.
+
+### Using Block Fonts
+
+1. Add a block font `@font-face` rule:
+
+```css
+@font-face {
+  font-family: 'Inter Block';
+  src: url('https://fonts.noisefactor.io/fonts/inter/Inter-Block.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+```
+
+2. Add the block font to your fallback chain:
+
+```css
+body {
+  font-family: 'Inter', 'Inter Block', sans-serif;
+}
+```
+
+Block fonts follow the naming pattern: `{FontName}-Block.woff2`
+
+### Building Block Fonts
+
+```bash
+python build_block_fonts.py
+```
+
+This reads fonts from `.build/` and generates block variants in `.build-block/`.
+They are synced to S3 alongside regular fonts by `sync_fonts_to_s3.py`.
 
 ## CORS
 
