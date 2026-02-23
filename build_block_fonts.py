@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
-"""build_block_fonts.py - Generate metric-matched block fonts
+"""build_block_fonts.py - Generate metric-matched placeholder fonts
 
-Reads WOFF2 fonts from .build/ and generates block font variants where
-every glyph is a solid rectangle with identical metrics to the source.
-Output goes to .build-block/ for S3 sync.
+Reads WOFF2 fonts from .build/ and generates three placeholder font styles
+where every glyph has identical metrics to the source:
 
-For variable fonts, instantiates at each weight used across Noise Factor
-sites, extracts exact advance widths, then builds a variable block font
-with correct gvar phantom point deltas so advance widths match at ALL
+  - Block:   Solid filled rectangles (visible placeholder)
+  - Outline: Thin-stroked rectangles (lighter visible placeholder)
+  - Blank:   Empty glyphs (invisible metric reservation)
+
+Output goes to .build-block/ for deployment.
+
+For variable fonts, extracts exact advance widths across the weight axis
+and builds gvar phantom point deltas so advance widths match at ALL
 weight values.
 
 Copyright (c) 2025 Noise Factor (https://noisefactor.io/)

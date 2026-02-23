@@ -91,41 +91,62 @@ Many fonts include variable font versions (when available):
       crossorigin>
 ```
 
-## Block Fonts (Zero-CLS Loading)
+## Placeholder Fonts (Zero-CLS Loading)
 
-Block fonts are metric-matched placeholder fonts where every glyph is a solid rectangle.
-They load near-instantly (~3-15KB) and prevent layout shift when the real font loads.
+Placeholder fonts are metric-matched fonts where every glyph has identical metrics to the
+source but simplified shapes. They load near-instantly (~3-15KB) and prevent layout shift
+when the real font loads. Three styles are available:
 
-### Using Block Fonts
+- **Block**: Solid filled rectangles. A visible placeholder that shows where text will appear.
+- **Outline**: Thin-stroked rectangles. A lighter visible placeholder, less visually heavy than Block.
+- **Blank**: Empty glyphs with no visible shape. Reserves space invisibly so layout doesn't shift.
 
-1. Add a block font `@font-face` rule:
+### Using Placeholder Fonts
+
+Add a placeholder font `@font-face` rule and include it in your fallback chain:
 
 ```css
+/* Blank style: invisible metric reservation (recommended for production) */
+@font-face {
+  font-family: 'Inter Blank';
+  src: url('https://fonts.noisefactor.io/fonts/inter/Inter-Blank.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
+
+/* Block style: visible solid placeholder (useful during development) */
 @font-face {
   font-family: 'Inter Block';
   src: url('https://fonts.noisefactor.io/fonts/inter/Inter-Block.woff2') format('woff2');
   font-weight: 400;
   font-style: normal;
 }
-```
 
-2. Add the block font to your fallback chain:
+/* Outline style: visible light placeholder */
+@font-face {
+  font-family: 'Inter Outline';
+  src: url('https://fonts.noisefactor.io/fonts/inter/Inter-Outline.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+}
 
-```css
 body {
-  font-family: 'Inter', 'Inter Block', sans-serif;
+  font-family: 'Inter', 'Inter Blank', sans-serif;
 }
 ```
 
-Block fonts follow the naming pattern: `{FontName}-Block.woff2`
+Placeholder fonts follow the naming patterns:
+- `{FontName}-Block.woff2` (solid rectangles)
+- `{FontName}-Outline.woff2` (stroked rectangles)
+- `{FontName}-Blank.woff2` (empty glyphs)
 
-### Building Block Fonts
+### Building Placeholder Fonts
 
 ```bash
 python build_block_fonts.py
 ```
 
-This reads fonts from `.build/` and generates block variants in `.build-block/`.
+This reads fonts from `.build/` and generates all three placeholder variants in `.build-block/`.
 They are synced to S3 alongside regular fonts by `sync_fonts_to_s3.py`.
 
 ## CORS
