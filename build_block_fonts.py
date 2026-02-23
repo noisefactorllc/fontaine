@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 """build_block_fonts.py - Generate metric-matched placeholder fonts
 
-Reads WOFF2 fonts from .build/ and generates three placeholder font styles
+Reads WOFF2 fonts from .build/ and generates two placeholder font styles
 where every glyph has identical metrics to the source:
 
   - Block:   Solid filled rectangles (visible placeholder)
-  - Outline: Thin-stroked rectangles (lighter visible placeholder)
   - Blank:   Empty glyphs (invisible metric reservation)
 
 Output goes to .build-block/ for deployment.
@@ -75,28 +74,6 @@ def make_block_glyph(pen, advance_width, ascender, descender):
     pen.lineTo((advance_width, descender))
     pen.closePath()
 
-
-def make_outline_glyph(pen, advance_width, ascender, descender):
-    """Draw a thin-stroked rectangle outline from descender to ascender."""
-    if advance_width == 0:
-        return
-    S = 2  # stroke width in font units
-    # If glyph is too narrow for an outline, fall back to solid fill
-    if advance_width < 2 * S + 1 or (ascender - descender) < 2 * S + 1:
-        make_block_glyph(pen, advance_width, ascender, descender)
-        return
-    # Outer contour (clockwise = filled)
-    pen.moveTo((0, descender))
-    pen.lineTo((0, ascender))
-    pen.lineTo((advance_width, ascender))
-    pen.lineTo((advance_width, descender))
-    pen.closePath()
-    # Inner contour (counter-clockwise = hole)
-    pen.moveTo((S, descender + S))
-    pen.lineTo((advance_width - S, descender + S))
-    pen.lineTo((advance_width - S, ascender - S))
-    pen.lineTo((S, ascender - S))
-    pen.closePath()
 
 
 def get_advance_widths_at_weight(src_path, weight):
@@ -218,10 +195,7 @@ def build_block_font(src_path: Path, dest_path: Path, style: str = "Block") -> b
                 glyf_table[glyph_name] = Glyph()
             else:
                 ttpen = TTGlyphPen(None)
-                if style == "Outline":
-                    make_outline_glyph(ttpen, advance_width, ascender, descender)
-                else:
-                    make_block_glyph(ttpen, advance_width, ascender, descender)
+                make_block_glyph(ttpen, advance_width, ascender, descender)
                 glyf_table[glyph_name] = ttpen.glyph()
 
         # For variable fonts: build gvar with phantom point deltas for advance widths
@@ -293,7 +267,7 @@ def build_block_font(src_path: Path, dest_path: Path, style: str = "Block") -> b
 
 
 # Font styles to generate
-FONT_STYLES = ["Block", "Outline", "Blank"]
+FONT_STYLES = ["Block", "Blank"]
 
 
 def get_styled_filename(src_filename: str, style: str) -> str:
@@ -301,7 +275,6 @@ def get_styled_filename(src_filename: str, style: str) -> str:
 
     Examples:
         Nunito[wght].woff2, "Block" -> Nunito-Block.woff2
-        Nunito[wght].woff2, "Outline" -> Nunito-Outline.woff2
         Nunito[wght].woff2, "Blank" -> Nunito-Blank.woff2
     """
     name = src_filename
