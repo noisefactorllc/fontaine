@@ -72,6 +72,29 @@ def make_block_glyph(pen, advance_width, ascender, descender):
     pen.closePath()
 
 
+def make_outline_glyph(pen, advance_width, ascender, descender):
+    """Draw a thin-stroked rectangle outline from descender to ascender."""
+    if advance_width == 0:
+        return
+    S = 2  # stroke width in font units
+    # If glyph is too narrow for an outline, fall back to solid fill
+    if advance_width < 2 * S + 1 or (ascender - descender) < 2 * S + 1:
+        make_block_glyph(pen, advance_width, ascender, descender)
+        return
+    # Outer contour (clockwise = filled)
+    pen.moveTo((0, descender))
+    pen.lineTo((0, ascender))
+    pen.lineTo((advance_width, ascender))
+    pen.lineTo((advance_width, descender))
+    pen.closePath()
+    # Inner contour (counter-clockwise = hole)
+    pen.moveTo((S, descender + S))
+    pen.lineTo((advance_width - S, descender + S))
+    pen.lineTo((advance_width - S, ascender - S))
+    pen.lineTo((S, ascender - S))
+    pen.closePath()
+
+
 def get_advance_widths_at_weight(src_path, weight):
     """Instantiate variable font at a specific weight and return all advance widths."""
     font = TTFont(src_path)
