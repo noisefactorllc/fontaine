@@ -304,7 +304,7 @@ def get_styled_filename(src_filename: str, style: str) -> str:
 def main():
     print()
     print("=" * 60)
-    print("  f o n t a i n e  —  Block Font Builder")
+    print("  f o n t a i n e  —  Placeholder Font Builder")
     print("  https://noisefactor.io/")
     print("=" * 60)
     print()
@@ -328,10 +328,11 @@ def main():
         dest_dir = BLOCK_DIR / font_dir.name
 
         for src_file in woff2_files:
-            block_name = get_styled_filename(src_file.name, "Block")
-            dest_file = dest_dir / block_name
-            if not dest_file.exists():
-                work_items.append((src_file, dest_file, font_dir.name))
+            for style in FONT_STYLES:
+                styled_name = get_styled_filename(src_file.name, style)
+                dest_file = dest_dir / styled_name
+                if not dest_file.exists():
+                    work_items.append((src_file, dest_file, font_dir.name, style))
 
     if not work_items:
         print("All block fonts already generated.")
@@ -344,9 +345,9 @@ def main():
     failed = 0
 
     with tqdm(work_items, unit="file", ncols=80) as pbar:
-        for src_file, dest_file, dir_name in pbar:
+        for src_file, dest_file, dir_name, style in pbar:
             pbar.set_description(f"{dir_name[:20]:<20}")
-            if build_block_font(src_file, dest_file):
+            if build_block_font(src_file, dest_file, style):
                 success += 1
             else:
                 failed += 1
