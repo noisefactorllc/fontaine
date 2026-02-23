@@ -274,26 +274,25 @@ def build_block_font(src_path: Path, dest_path: Path) -> bool:
         return False
 
 
-def get_block_filename(src_filename: str) -> str:
-    """Convert source filename to block filename.
+# Font styles to generate
+FONT_STYLES = ["Block", "Outline", "Blank"]
+
+
+def get_styled_filename(src_filename: str, style: str) -> str:
+    """Convert source filename to styled filename.
 
     Examples:
-        Nunito[wght].woff2 -> Nunito-Block.woff2
-        Nunito-Italic[wght].woff2 -> Nunito-Italic-Block.woff2
-        Audiowide-Regular.woff2 -> Audiowide-Block.woff2
-        NotoSansMono[wdth,wght].woff2 -> NotoSansMono-Block.woff2
+        Nunito[wght].woff2, "Block" -> Nunito-Block.woff2
+        Nunito[wght].woff2, "Outline" -> Nunito-Outline.woff2
+        Nunito[wght].woff2, "Blank" -> Nunito-Blank.woff2
     """
     name = src_filename
-    # Remove .woff2 extension
     name = name.replace(".woff2", "")
-    # Remove variable font axis brackets [wght], [wdth,wght], etc.
     name = re.sub(r'\[.*?\]', '', name)
-    name = re.sub(r'%5B.*?%5D', '', name)  # URL-encoded brackets
-    # Remove -Regular suffix (redundant with -Block)
+    name = re.sub(r'%5B.*?%5D', '', name)
     name = re.sub(r'-Regular$', '', name)
-    # Remove trailing hyphen if any
     name = name.rstrip('-')
-    return f"{name}-Block.woff2"
+    return f"{name}-{style}.woff2"
 
 
 def main():
@@ -323,7 +322,7 @@ def main():
         dest_dir = BLOCK_DIR / font_dir.name
 
         for src_file in woff2_files:
-            block_name = get_block_filename(src_file.name)
+            block_name = get_styled_filename(src_file.name, "Block")
             dest_file = dest_dir / block_name
             if not dest_file.exists():
                 work_items.append((src_file, dest_file, font_dir.name))
