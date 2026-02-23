@@ -202,8 +202,16 @@ def build_block_font(src_path: Path, dest_path: Path, style: str = "Block") -> b
         # Replace each glyph based on style
         for glyph_name in glyph_order:
             advance_width = hmtx[glyph_name][0]
-            if advance_width == 0 or glyph_name == ".notdef":
+            if advance_width == 0:
                 glyf_table[glyph_name] = Glyph()
+                continue
+
+            # .notdef always gets a block glyph to ensure glyf table is non-empty
+            # (OTS rejects zero-length glyf tables, which happens with all-empty Blank fonts)
+            if glyph_name == ".notdef":
+                ttpen = TTGlyphPen(None)
+                make_block_glyph(ttpen, advance_width, ascender, descender)
+                glyf_table[glyph_name] = ttpen.glyph()
                 continue
 
             if style == "Blank":
