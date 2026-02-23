@@ -107,7 +107,7 @@ def get_advance_widths_at_weight(src_path, weight):
     return widths
 
 
-def build_block_font(src_path: Path, dest_path: Path) -> bool:
+def build_block_font(src_path: Path, dest_path: Path, style: str = "Block") -> bool:
     """Generate a block font from a source font file."""
     try:
         font = TTFont(src_path)
@@ -195,16 +195,22 @@ def build_block_font(src_path: Path, dest_path: Path) -> bool:
 
         glyf_table = font["glyf"]
 
-        # Replace each glyph with a solid rectangle
+        # Replace each glyph based on style
         for glyph_name in glyph_order:
             advance_width = hmtx[glyph_name][0]
             if advance_width == 0 or glyph_name == ".notdef":
                 glyf_table[glyph_name] = Glyph()
                 continue
 
-            ttpen = TTGlyphPen(None)
-            make_block_glyph(ttpen, advance_width, ascender, descender)
-            glyf_table[glyph_name] = ttpen.glyph()
+            if style == "Blank":
+                glyf_table[glyph_name] = Glyph()
+            else:
+                ttpen = TTGlyphPen(None)
+                if style == "Outline":
+                    make_outline_glyph(ttpen, advance_width, ascender, descender)
+                else:
+                    make_block_glyph(ttpen, advance_width, ascender, descender)
+                glyf_table[glyph_name] = ttpen.glyph()
 
         # For variable fonts: build gvar with phantom point deltas for advance widths
         if is_variable and has_weight_axis and hvar_glyph_deltas:
