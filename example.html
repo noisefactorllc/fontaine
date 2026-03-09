@@ -193,6 +193,18 @@
       color: var(--hf-text-dim);
       margin-bottom: var(--hf-space-4);
     }
+
+    /* Responsive */
+    @media (max-width: 600px) {
+      .page { padding: var(--hf-space-3); }
+      .hero-title { font-size: 2.5rem; }
+      .hero-tagline { font-size: var(--hf-size-base); }
+      .font-grid { grid-template-columns: 1fr; }
+      .font-preview { font-size: 20px; min-height: 56px; }
+      .install-prompt { padding: var(--hf-space-4); }
+      .stats { gap: var(--hf-space-3); }
+      .nav-links { gap: var(--hf-space-3); }
+    }
   </style>
 </head>
 <body>
