@@ -3,340 +3,243 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>fontaine - Example App</title>
-  <link rel="preload" href="https://fonts.noisefactor.io/fonts/nunito/Nunito[wght].woff2" as="font" type="font/woff2" crossorigin>
+  <title>Fontaine — Bundle Demo</title>
+
+  <!-- Handfish design system -->
+  <link rel="stylesheet" href="https://handfish.noisefactor.io/0.9.0/styles/index.css">
+
+  <!-- Sacramento accent font -->
+  <link rel="preload" href="https://fonts.noisefactor.io/fonts/sacramento/Sacramento-Regular.woff2" as="font" type="font/woff2" crossorigin>
+
   <style>
     @font-face {
-      font-family: Nunito;
-      font-weight: 100 900;
+      font-family: Sacramento;
+      src: url('https://fonts.noisefactor.io/fonts/sacramento/Sacramento-Regular.woff2') format('woff2');
+      font-weight: 400;
       font-style: normal;
       font-display: swap;
-      src: url('https://fonts.noisefactor.io/fonts/nunito/Nunito[wght].woff2') format('woff2');
     }
 
-    :root {
-      --bg: #1a1a2e;
-      --surface: #16213e;
-      --primary: #e94560;
-      --text: #eaeaea;
-      --text-muted: #888;
-      --border: #333;
+    .page { max-width: 960px; margin: 0 auto; padding: var(--hf-space-6); }
+
+    /* Hero */
+    .hero { margin-bottom: var(--hf-space-6); }
+    .hero-title {
+      font-family: Sacramento, cursive;
+      font-size: 4rem;
+      font-weight: 400;
+      color: var(--hf-accent);
+      margin: 0 0 var(--hf-space-2);
+      line-height: 1.1;
     }
-    
-    * {
-      box-sizing: border-box;
-    }
-    
-    body {
-      font-family: 'Nunito', system-ui, -apple-system, sans-serif;
-      font-weight: 500;
-      background: var(--bg);
-      color: var(--text);
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
+    .hero-tagline {
+      font-size: var(--hf-size-lg);
+      color: var(--hf-text-dim);
+      margin: 0 0 var(--hf-space-4);
     }
 
-    button, .btn {
-      font-family: inherit;
-      font-weight: 500;
+    /* Header nav */
+    .page-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: var(--hf-space-1);
     }
-    
-    .container {
-      max-width: 1000px;
-      margin: 0 auto;
+    .nav-links {
+      display: flex;
+      gap: var(--hf-space-4);
+      align-items: center;
     }
-    
-    h1 {
-      color: var(--primary);
-      margin-bottom: 10px;
+    .nav-links a {
+      color: var(--hf-text-dim);
+      text-decoration: none;
+      font-size: var(--hf-size-sm);
     }
-    
-    .subtitle {
-      color: var(--text-muted);
-      margin-bottom: 30px;
-    }
-    
+    .nav-links a:hover { color: var(--hf-accent); }
+
     /* Progress bar */
     .progress-container {
-      background: var(--surface);
-      border-radius: 8px;
-      padding: 20px;
-      margin-bottom: 30px;
+      border-radius: var(--hf-radius);
+      padding: var(--hf-space-4);
+      margin-bottom: var(--hf-space-6);
     }
-    
     .progress-bar {
-      background: var(--border);
-      border-radius: 4px;
+      background: var(--hf-bg-elevated);
+      border-radius: var(--hf-radius-sm);
       height: 24px;
       overflow: hidden;
-      margin-bottom: 10px;
+      margin-bottom: var(--hf-space-2);
     }
-    
     .progress-fill {
-      background: linear-gradient(90deg, var(--primary), #ff6b6b);
+      background: var(--hf-accent);
       height: 100%;
       width: 0%;
       transition: width 0.2s ease;
-      border-radius: 4px;
+      border-radius: var(--hf-radius-sm);
     }
-    
     .progress-text {
-      color: var(--text-muted);
-      font-size: 14px;
+      color: var(--hf-text-dim);
+      font-size: var(--hf-size-sm);
     }
-    
-    .progress-container.hidden {
-      display: none;
-    }
-    
+
     /* Filters */
     .filters {
       display: flex;
-      gap: 10px;
+      gap: var(--hf-space-2);
       flex-wrap: wrap;
-      margin-bottom: 20px;
+      margin-bottom: var(--hf-space-4);
     }
-    
     .filter-btn {
-      background: var(--surface);
-      border: 1px solid var(--border);
-      color: var(--text);
-      padding: 8px 16px;
-      border-radius: 20px;
-      cursor: pointer;
-      transition: all 0.2s;
+      font-size: var(--hf-size-sm);
+      padding: var(--hf-space-1) var(--hf-space-3);
+      border-radius: var(--hf-radius-pill);
     }
-    
-    .filter-btn:hover {
-      border-color: var(--primary);
-    }
-    
     .filter-btn.active {
-      background: var(--primary);
-      border-color: var(--primary);
+      background: var(--hf-accent);
+      color: var(--hf-bg-base);
+      border-color: var(--hf-accent);
     }
-    
+
     /* Font grid */
     .font-grid {
       display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-      gap: 20px;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: var(--hf-space-3);
     }
-    
-    .font-card {
-      background: var(--surface);
-      border-radius: 8px;
-      padding: 20px;
-      border: 1px solid var(--border);
-      transition: border-color 0.2s;
-    }
-    
-    .font-card:hover {
-      border-color: var(--primary);
-    }
-    
+    .font-card { cursor: default; }
+    .font-card:hover { border-color: var(--hf-accent); }
     .font-name {
-      font-size: 18px;
-      font-weight: bold;
-      margin-bottom: 5px;
+      font-size: var(--hf-size-base);
+      font-weight: var(--hf-weight-semibold);
+      color: var(--hf-text-bright);
+      margin-bottom: var(--hf-space-1);
     }
-    
     .font-meta {
-      font-size: 12px;
-      color: var(--text-muted);
-      margin-bottom: 15px;
+      font-size: var(--hf-size-xs);
+      color: var(--hf-text-dim);
+      margin-bottom: var(--hf-space-3);
     }
-    
     .font-preview {
-      font-size: 28px;
-      line-height: 1.3;
-      min-height: 80px;
+      font-size: 24px;
+      line-height: 1.4;
+      min-height: 70px;
       word-wrap: break-word;
+      color: var(--hf-text-normal);
     }
-    
     .font-tags {
       display: flex;
-      gap: 5px;
+      gap: var(--hf-space-1);
       flex-wrap: wrap;
-      margin-top: 15px;
+      margin-top: var(--hf-space-3);
     }
-    
     .tag {
-      background: var(--bg);
-      padding: 3px 8px;
-      border-radius: 4px;
-      font-size: 11px;
-      color: var(--text-muted);
+      font-size: 10px;
+      padding: 2px 6px;
+      border-radius: var(--hf-radius-sm);
+      background: var(--hf-bg-base);
+      color: var(--hf-text-dim);
     }
-    
-    .tag.quirky {
-      background: #4a1942;
-      color: #ff9ff3;
-    }
-    
     .tag.core {
-      background: #1e3a5f;
-      color: #74b9ff;
+      background: color-mix(in srgb, var(--hf-blue) 20%, transparent 80%);
+      color: var(--hf-blue);
     }
-    
+    .tag.quirky {
+      background: color-mix(in srgb, var(--hf-accent) 20%, transparent 80%);
+      color: var(--hf-accent);
+    }
+
     /* Stats */
     .stats {
       display: flex;
-      gap: 20px;
-      margin-bottom: 30px;
+      gap: var(--hf-space-4);
+      margin-bottom: var(--hf-space-6);
       flex-wrap: wrap;
     }
-    
     .stat {
-      background: var(--surface);
-      padding: 15px 25px;
-      border-radius: 8px;
       text-align: center;
     }
-    
     .stat-value {
-      font-size: 32px;
-      font-weight: bold;
-      color: var(--primary);
+      font-size: var(--hf-size-2xl);
+      font-weight: var(--hf-weight-bold);
+      color: var(--hf-accent);
     }
-    
     .stat-label {
-      font-size: 12px;
-      color: var(--text-muted);
+      font-size: var(--hf-size-xs);
+      color: var(--hf-text-dim);
     }
-    
+
     /* Search */
-    .search-box {
-      width: 100%;
-      padding: 12px 16px;
-      background: var(--surface);
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      color: var(--text);
-      font-size: 16px;
-      margin-bottom: 20px;
-    }
-    
-    .search-box:focus {
-      outline: none;
-      border-color: var(--primary);
-    }
-    
-    /* Loading state */
-    .loading {
-      text-align: center;
-      padding: 50px;
-      color: var(--text-muted);
-    }
-    
+    .search-box { margin-bottom: var(--hf-space-4); }
+
+    /* Error */
     .error {
-      background: #3d1f1f;
-      color: #ff6b6b;
-      padding: 20px;
-      border-radius: 8px;
-      margin-bottom: 20px;
+      padding: var(--hf-space-4);
+      border-radius: var(--hf-radius);
+      margin-bottom: var(--hf-space-4);
     }
-    
+
     /* Install prompt */
     .install-prompt {
-      background: var(--surface);
-      border-radius: 8px;
-      padding: 30px;
-      margin-bottom: 30px;
+      border-radius: var(--hf-radius);
+      padding: var(--hf-space-8);
+      margin-bottom: var(--hf-space-6);
       text-align: center;
     }
-    
     .install-prompt h2 {
       margin-top: 0;
-      color: var(--primary);
+      color: var(--hf-accent);
     }
-    
     .install-prompt p {
-      color: var(--text-muted);
-      margin-bottom: 20px;
-    }
-    
-    .btn {
-      background: var(--primary);
-      color: white;
-      border: none;
-      padding: 12px 24px;
-      border-radius: 8px;
-      font-size: 16px;
-      cursor: pointer;
-      transition: opacity 0.2s;
-    }
-    
-    .btn:hover {
-      opacity: 0.9;
-    }
-    
-    .btn-secondary {
-      background: var(--border);
-      margin-left: 10px;
-    }
-    
-    .btn-danger {
-      background: #6b3030;
-    }
-    
-    .btn-danger:hover {
-      background: #8b4040;
-    }
-    
-    /* Header with source link */
-    .header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 10px;
-    }
-    
-    .source-link {
-      color: var(--text-muted);
-      text-decoration: none;
-      font-size: 14px;
-    }
-    
-    .source-link:hover {
-      color: var(--primary);
+      color: var(--hf-text-dim);
+      margin-bottom: var(--hf-space-4);
     }
   </style>
 </head>
 <body>
-  <div class="container">
-    <div class="header">
-      <h1>fontaine example page</h1>
-      <a href="https://github.com/noisedeck/fontaine" class="source-link">source</a>
+  <div class="page">
+    <div class="page-header">
+      <div></div>
+      <div class="nav-links">
+        <a href="../">&larr; Fontaine</a>
+        <a href="https://noisefactor.io">noise factor</a>
+        <a href="https://github.com/noisedeck/fontaine">source</a>
+      </div>
     </div>
-    <p class="subtitle">A curated set of 100 freely distributable fonts and an async, cache-aware bundler for JavaScript apps.</p>
 
-    <p>This example will install the bundle to your browser. Don't forget to uninstall afterwards, because it's only useful for this demo!</p>
-    
+    <div class="hero">
+      <h1 class="hero-title">Fontaine</h1>
+      <p class="hero-tagline">Bundle Demo — download all 100 fonts to IndexedDB for offline use in webapps.</p>
+    </div>
+
+    <p style="color: var(--hf-text-dim); margin-bottom: var(--hf-space-6);">
+      This installs the full font bundle (~140 MB) to your browser's cache.
+      Unlike <a href="../" style="color: var(--hf-accent);">web font linking</a>, the bundle
+      gives your app instant offline access to every font. Don't forget to uninstall when you're done — it's only useful for this demo.
+    </p>
+
     <!-- Install Prompt -->
-    <div id="install-prompt" class="install-prompt" style="display: none;">
+    <div id="install-prompt" class="hf-card install-prompt" style="display: none;">
       <h2>Install Font Bundle</h2>
       <p>This will download approximately <strong>140 MB</strong> of fonts to your browser's cache.</p>
-      <button id="install-btn" class="btn">Install Fonts</button>
+      <button id="install-btn" class="hf-btn hf-btn-primary">Install Fonts</button>
     </div>
-    
+
     <!-- Uninstall option -->
-    <div id="uninstall-container" style="display: none; margin-bottom: 20px;">
-      <button id="uninstall-btn" class="btn btn-danger">Uninstall Fonts</button>
+    <div id="uninstall-container" style="display: none; margin-bottom: var(--hf-space-4);">
+      <button id="uninstall-btn" class="hf-btn" style="color: var(--hf-red); border-color: color-mix(in srgb, var(--hf-red) 30%, transparent 70%);">Uninstall Fonts</button>
     </div>
-    
+
     <!-- Progress -->
-    <div id="progress-container" class="progress-container" style="display: none;">
+    <div id="progress-container" class="hf-card progress-container" style="display: none;">
       <div class="progress-bar">
         <div id="progress-fill" class="progress-fill"></div>
       </div>
       <div id="progress-text" class="progress-text">Initializing...</div>
     </div>
-    
+
     <!-- Error display -->
-    <div id="error" class="error" style="display: none;"></div>
-    
+    <div id="error" class="hf-card hf-bg-error error" style="display: none;"></div>
+
     <!-- Stats -->
     <div id="stats" class="stats" style="display: none;">
       <div class="stat">
@@ -356,22 +259,22 @@
         <div class="stat-label">Version</div>
       </div>
     </div>
-    
+
     <!-- Search -->
-    <input type="text" id="search" class="search-box" placeholder="Search fonts..." style="display: none;">
-    
+    <input type="text" id="search" class="hf-input search-box" placeholder="Search fonts..." style="display: none;">
+
     <!-- Filters -->
     <div id="filters" class="filters" style="display: none;">
-      <button class="filter-btn active" data-filter="all">All</button>
-      <button class="filter-btn" data-filter="core">Core</button>
-      <button class="filter-btn" data-filter="quirky">Quirky</button>
-      <button class="filter-btn" data-filter="sans-serif">Sans-Serif</button>
-      <button class="filter-btn" data-filter="serif">Serif</button>
-      <button class="filter-btn" data-filter="monospace">Monospace</button>
-      <button class="filter-btn" data-filter="handwritten">Handwritten</button>
-      <button class="filter-btn" data-filter="display">Display</button>
+      <button class="hf-btn filter-btn active" data-filter="all">All</button>
+      <button class="hf-btn filter-btn" data-filter="core">Core</button>
+      <button class="hf-btn filter-btn" data-filter="quirky">Quirky</button>
+      <button class="hf-btn filter-btn" data-filter="sans-serif">Sans-Serif</button>
+      <button class="hf-btn filter-btn" data-filter="serif">Serif</button>
+      <button class="hf-btn filter-btn" data-filter="monospace">Monospace</button>
+      <button class="hf-btn filter-btn" data-filter="handwritten">Handwritten</button>
+      <button class="hf-btn filter-btn" data-filter="display">Display</button>
     </div>
-    
+
     <!-- Font grid -->
     <div id="font-grid" class="font-grid"></div>
   </div>
@@ -379,71 +282,67 @@
   <script src="font-loader.js"></script>
   <script>
     const PREVIEW_TEXT = 'Sphinx of black quartz, judge my vow! 01234567890';
-    
+
     let loader;
     let allFonts = [];
     let currentFilter = 'all';
     let searchQuery = '';
-    
-    // Progress handling
+
     function showProgress() {
       document.getElementById('progress-container').style.display = 'block';
     }
-    
+
     function updateProgress(percent, message) {
       document.getElementById('progress-fill').style.width = `${percent}%`;
       document.getElementById('progress-text').textContent = message;
     }
-    
+
     function hideProgress() {
       document.getElementById('progress-container').style.display = 'none';
     }
-    
+
     function showError(message) {
       const el = document.getElementById('error');
       el.textContent = message;
       el.style.display = 'block';
     }
-    
+
     function showInstallPrompt() {
       document.getElementById('install-prompt').style.display = 'block';
     }
-    
+
     function hideInstallPrompt() {
       document.getElementById('install-prompt').style.display = 'none';
     }
-    
+
     function showUninstallOption() {
       document.getElementById('uninstall-container').style.display = 'block';
     }
-    
+
     function hideUninstallOption() {
       document.getElementById('uninstall-container').style.display = 'none';
     }
-    
-    // Render font cards
+
     function renderFonts(fonts) {
       const grid = document.getElementById('font-grid');
       grid.innerHTML = '';
-      
+
       fonts.forEach(font => {
         const card = document.createElement('div');
-        card.className = 'font-card';
+        card.className = 'hf-card font-card';
         card.innerHTML = `
           <div class="font-name">${font.name}</div>
-          <div class="font-meta">${font.category} • ${font.license}</div>
+          <div class="font-meta">${font.category} · ${font.license}</div>
           <div class="font-preview" id="preview-${font.id}">${PREVIEW_TEXT}</div>
           <div class="font-tags">
             ${font.tags.map(tag => `<span class="tag ${tag}">${tag}</span>`).join('')}
           </div>
         `;
         grid.appendChild(card);
-        
-        // Load and apply font async
         loadFontPreview(font);
       });
     }
-    
+
     async function loadFontPreview(font) {
       try {
         const registered = await loader.registerFont(font.id, font.name);
@@ -457,28 +356,21 @@
         console.warn(`Failed to load font ${font.id}:`, e);
       }
     }
-    
-    // Filter fonts
+
     function filterFonts() {
       let filtered = allFonts;
-      
-      // Apply tag/category filter
       if (currentFilter !== 'all') {
-        filtered = filtered.filter(f => 
+        filtered = filtered.filter(f =>
           f.tags.includes(currentFilter) || f.category === currentFilter
         );
       }
-      
-      // Apply search
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
         filtered = filtered.filter(f => f.name.toLowerCase().includes(q));
       }
-      
       renderFonts(filtered);
     }
-    
-    // Setup filter buttons
+
     function setupFilters() {
       document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -489,17 +381,14 @@
         });
       });
     }
-    
-    // Setup search
+
     function setupSearch() {
-      const searchBox = document.getElementById('search');
-      searchBox.addEventListener('input', (e) => {
+      document.getElementById('search').addEventListener('input', (e) => {
         searchQuery = e.target.value;
         filterFonts();
       });
     }
-    
-    // Update stats
+
     function updateStats() {
       const info = loader.getVersionInfo();
       document.getElementById('stat-total').textContent = info.totalFonts;
@@ -507,55 +396,41 @@
       document.getElementById('stat-quirky').textContent = loader.getFontsByTag('quirky').length;
       document.getElementById('stat-version').textContent = info.installed || '-';
     }
-    
-    // Show UI elements
+
     function showUI() {
       document.getElementById('stats').style.display = 'flex';
       document.getElementById('search').style.display = 'block';
       document.getElementById('filters').style.display = 'flex';
     }
-    
-    // Load fonts (after user confirms or from cache)
+
     async function loadFonts() {
       showProgress();
       hideInstallPrompt();
-      
+
       try {
         const updated = await loader.load('./bundle', {
           onProgress: updateProgress
         });
-        
-        if (updated) {
-          console.log('Fonts downloaded and cached');
-        } else {
-          console.log('Using cached fonts');
-        }
-        
+
         hideProgress();
         showUI();
         showUninstallOption();
-        
+
         allFonts = loader.getAllFonts();
         updateStats();
         setupFilters();
         setupSearch();
-        
-        // Initial render
         renderFonts(allFonts);
-        
+
       } catch (error) {
-        console.error('Failed to load fonts:', error);
         hideProgress();
         showError(`Failed to load fonts: ${error.message}`);
       }
     }
-    
-    // Uninstall fonts
+
     async function uninstallFonts() {
-      if (!confirm('Are you sure you want to uninstall all cached fonts?')) {
-        return;
-      }
-      
+      if (!confirm('Are you sure you want to uninstall all cached fonts?')) return;
+
       try {
         await loader.clearCache();
         hideUninstallOption();
@@ -565,38 +440,28 @@
         document.getElementById('font-grid').innerHTML = '';
         showInstallPrompt();
       } catch (error) {
-        console.error('Failed to uninstall fonts:', error);
         showError(`Failed to uninstall fonts: ${error.message}`);
       }
     }
-    
-    // Main init
+
     async function init() {
       loader = new FontLoader();
-      
-      // Setup button handlers
+
       document.getElementById('install-btn').addEventListener('click', loadFonts);
       document.getElementById('uninstall-btn').addEventListener('click', uninstallFonts);
-      
+
       try {
-        // Check if fonts are already installed
         const installedVersion = await loader.getInstalledVersion();
-        
         if (installedVersion) {
-          // Fonts already cached, load them
           await loadFonts();
         } else {
-          // Show install prompt
           showInstallPrompt();
         }
-        
       } catch (error) {
-        console.error('Failed to check font status:', error);
         showError(`Failed to initialize: ${error.message}`);
       }
     }
-    
-    // Start
+
     init();
   </script>
 </body>
