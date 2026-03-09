@@ -1,0 +1,51 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'index.html'
+      - 'example.html'
+      - 'build_site.py'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-pages:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Build site pages
+        run: |
+          # Create minimal dist/site with just the HTML pages (no fonts needed)
+          mkdir -p dist/site/demo dist/site/bundle
+          cp index.html dist/site/index.html
+          cp example.html dist/site/demo/index.html
+          cp font-loader.js dist/site/demo/font-loader.js
+          cp bundle/fonts.json dist/site/bundle/fonts.json
+
+      - name: Set up SSH
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+          echo "${{ secrets.SCAFFOLD_SSH_KEY }}" | base64 -d > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          ssh-keyscan ${{ secrets.SCAFFOLD_SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Deploy pages only
+        run: |
+          DEST="deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisefactor.io/content/"
+          rsync -avz dist/site/index.html "$DEST"
+          rsync -avz dist/site/bundle/fonts.json "${DEST}bundle/"
+          rsync -avz dist/site/demo/ "${DEST}demo/"
