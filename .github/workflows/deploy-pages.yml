@@ -7,7 +7,7 @@ on:
     paths:
       - 'index.html'
       - 'example.html'
-      - 'build_site.py'
+      - 'font-loader.js'
   workflow_dispatch:
 
 permissions:
@@ -21,19 +21,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
       - name: Build site pages
         run: |
-          # Create minimal dist/site with just the HTML pages (no fonts needed)
-          mkdir -p dist/site/demo dist/site/bundle
+          mkdir -p dist/site/demo
           cp index.html dist/site/index.html
           cp example.html dist/site/demo/index.html
           cp font-loader.js dist/site/demo/font-loader.js
-          cp bundle/fonts.json dist/site/bundle/fonts.json
 
       - name: Set up SSH
         run: |
@@ -47,5 +40,4 @@ jobs:
         run: |
           DEST="deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisefactor.io/content/"
           rsync -avz dist/site/index.html "$DEST"
-          rsync -avz dist/site/bundle/fonts.json "${DEST}bundle/"
           rsync -avz dist/site/demo/ "${DEST}demo/"

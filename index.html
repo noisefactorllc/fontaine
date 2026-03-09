@@ -926,7 +926,7 @@ const core = loader.getFontsByTag('core');</code></pre>
 
       // Load catalog
       try {
-        const resp = await fetch('bundle/fonts.json');
+        const resp = await fetch('https://fonts.noisefactor.io/bundle/fonts.json');
         const data = await resp.json();
         allFonts = data.fonts;
         renderFonts(allFonts);
