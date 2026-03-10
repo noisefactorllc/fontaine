@@ -583,6 +583,10 @@ const core = loader.getFontsByTag('core');</code></pre>
       return font.dir_name.replace(/^\d+-/, '');
     }
 
+    function isVariableFont(filename) {
+      return filename.includes('[wght]') || filename.includes('-VF.') || filename.includes('Variable');
+    }
+
     function parseWeights(font) {
       // Extract weight info from filenames
       const weights = [];
@@ -591,7 +595,7 @@ const core = loader.getFontsByTag('core');</code></pre>
         const fn = file.filename;
         // Skip Display variants, Italic-only, Variable fonts
         if (fn.includes('Display')) continue;
-        if (fn.includes('[wght]')) {
+        if (isVariableFont(fn)) {
           // Variable font — list common weights
           if (!fn.includes('Italic')) {
             return [
@@ -715,7 +719,7 @@ const core = loader.getFontsByTag('core');</code></pre>
       const target = weights.find(w => w.weight === 400) || weights[0];
       if (!target) return;
 
-      const isVariable = target.file.includes('[wght]');
+      const isVariable = isVariableFont(target.file);
       const face = new FontFace(font.name,
         `url('${FONT_BASE}/${dir}/${target.file}')`,
         { weight: isVariable ? '100 900' : '400', style: 'normal', display: 'swap' }
@@ -738,7 +742,7 @@ const core = loader.getFontsByTag('core');</code></pre>
       const target = weights.find(w => w.weight === weightNum);
       if (!target) return;
 
-      const isVariable = target.file.includes('[wght]');
+      const isVariable = isVariableFont(target.file);
       if (isVariable) return; // variable font already covers all weights
 
       const face = new FontFace(font.name,
@@ -887,7 +891,7 @@ const core = loader.getFontsByTag('core');</code></pre>
     function updateDetailCSS(font) {
       const dir = fontDirName(font);
       const weights = parseWeights(font);
-      const isVariable = weights.length > 0 && weights[0].file.includes('[wght]');
+      const isVariable = weights.length > 0 && isVariableFont(weights[0].file);
 
       let css;
       if (isVariable) {
