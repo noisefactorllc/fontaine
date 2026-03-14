@@ -22,13 +22,44 @@
   <meta name="twitter:description" content="Free web fonts with zero-CLS preloading. No signup, no API keys, no tracking.">
   <meta name="twitter:image" content="https://fonts.noisefactor.io/img/og-image.png">
 
-  <!-- Handfish design system -->
-  <link rel="stylesheet" href="https://handfish.noisefactor.io/0.9.0/styles/index.css">
-
-  <!-- Sacramento accent font -->
-  <link rel="preload" href="https://fonts.noisefactor.io/fonts/sacramento/Sacramento-Regular.woff2" as="font" type="font/woff2" crossorigin>
-
+  <!-- Inline @font-face BEFORE any external CSS — browser knows these fonts
+       immediately so it uses block (invisible) instead of Times New Roman -->
   <style>
+    @font-face {
+      font-family: 'Nunito Blank';
+      src: url('https://fonts.noisefactor.io/fonts/nunito/Nunito-Blank.woff2') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: block;
+    }
+    @font-face {
+      font-family: Nunito;
+      src: url('https://fonts.noisefactor.io/fonts/nunito/Nunito[wght].woff2') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Noto Sans Mono Blank';
+      src: url('https://fonts.noisefactor.io/fonts/noto-sans-mono/NotoSansMono-Blank.woff2') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: block;
+    }
+    @font-face {
+      font-family: 'Noto Sans Mono';
+      src: url('https://fonts.noisefactor.io/fonts/noto-sans-mono/NotoSansMono[wdth,wght].woff2') format('woff2');
+      font-weight: 100 900;
+      font-style: normal;
+      font-display: swap;
+    }
+    @font-face {
+      font-family: 'Sacramento Blank';
+      src: url('https://fonts.noisefactor.io/fonts/sacramento/Sacramento-Blank.woff2') format('woff2');
+      font-weight: 400;
+      font-style: normal;
+      font-display: block;
+    }
     @font-face {
       font-family: Sacramento;
       src: url('https://fonts.noisefactor.io/fonts/sacramento/Sacramento-Regular.woff2') format('woff2');
@@ -36,6 +67,18 @@
       font-style: normal;
       font-display: swap;
     }
+    html { font-family: Nunito, 'Nunito Blank'; }
+  </style>
+
+  <!-- Preload blank fonts (tiny ~5-26KB) -->
+  <link rel="preload" href="https://fonts.noisefactor.io/fonts/nunito/Nunito-Blank.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="https://fonts.noisefactor.io/fonts/noto-sans-mono/NotoSansMono-Blank.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="https://fonts.noisefactor.io/fonts/sacramento/Sacramento-Blank.woff2" as="font" type="font/woff2" crossorigin>
+
+  <!-- Handfish design system -->
+  <link rel="stylesheet" href="https://handfish.noisefactor.io/0.9.0/styles/index.css">
+
+  <style>
 
     /* Layout */
     .page { max-width: 960px; margin: 0 auto; padding: var(--hf-space-6); }
@@ -43,7 +86,7 @@
     /* Hero */
     .hero { margin-bottom: var(--hf-space-10); }
     .hero-title {
-      font-family: Sacramento, cursive;
+      font-family: Sacramento, 'Sacramento Blank';
       font-size: 4rem;
       font-weight: 400;
       color: var(--hf-accent);
@@ -451,7 +494,7 @@
        format('woff2');
 }
 
-body { font-family: 'Inter', sans-serif; }</code></pre>
+body { font-family: 'Inter'; }</code></pre>
           <p>Preload the blank variant for <strong>zero layout shift</strong> — it loads instantly (~5 KB) and holds the exact same metrics as the real font:</p>
 <pre><code>&lt;!-- Preload blank variant for instant layout --&gt;
 &lt;link rel="preload"
@@ -465,7 +508,7 @@ body { font-family: 'Inter', sans-serif; }</code></pre>
          format('woff2');
   }
   body {
-    font-family: 'Inter', 'Inter Blank', sans-serif;
+    font-family: 'Inter', 'Inter Blank';
   }
 &lt;/style&gt;</code></pre>
         </div>
@@ -554,6 +597,10 @@ const core = loader.getFontsByTag('core');</code></pre>
     const FONT_BASE = 'https://fonts.noisefactor.io/fonts';
     const PREVIEW_TEXT = 'Sphinx of black quartz, judge my vow! 01234567890';
 
+    // Stylesheet for injected @font-face rules (browser caches these natively)
+    const fontStyleSheet = document.createElement('style');
+    document.head.appendChild(fontStyleSheet);
+
     // Weight name → CSS weight mapping
     const WEIGHT_MAP = {
       'Thin': 100, 'ExtraLight': 200, 'Light': 300, 'Regular': 400,
@@ -572,7 +619,6 @@ const core = loader.getFontsByTag('core');</code></pre>
     let searchQuery = '';
     let observer;
     let loadedFonts = new Set();       // fonts with real weight loaded
-    let loadedBlanks = new Set();      // fonts with blank loaded
     let currentDetailFont = null;
     let currentDetailWeight = 400;
 
@@ -640,99 +686,68 @@ const core = loader.getFontsByTag('core');</code></pre>
     }
 
     function getBlankFile(font) {
-      // Blank files follow: {FontName}-Blank.woff2
-      const name = font.name.replace(/\s+/g, '');
+      // Derive blank filename from the regular font file, mirroring
+      // build_block_fonts.py's get_styled_filename() logic:
+      // strip .woff2, strip [wght]/%5B…%5D, strip -Regular, append -Blank.woff2
+      const regular = getRegularFile(font);
+      if (!regular) return null;
+      let name = regular.replace('.woff2', '');
+      name = name.replace(/\[.*?\]/g, '').replace(/%5B.*?%5D/g, '');
+      name = name.replace(/-Regular$/, '');
+      name = name.replace(/-+$/, '');
       return `${name}-Blank.woff2`;
     }
 
     // --- Font Loading ---
-    // Single sequential queue: all blanks for visible cards first,
-    // then real fonts in the same order.
+    // 1. Inject blank @font-face + await its load (tiny, ~5KB, cached)
+    // 2. THEN inject real @font-face (swap uses the now-loaded blank as fallback)
+    // No generic fallbacks ever shown.
 
-    const queue = [];       // { font, type: 'blank' | 'real' }
-    let queueRunning = false;
-
-    function enqueueFont(font) {
-      // Add blank then real, in order. Dedup by checking existing entries.
-      const blankKey = font.id + '-blank';
-      const realKey = font.id + '-real';
-      if (!loadedBlanks.has(font.id) && !queue.some(e => e.key === blankKey)) {
-        queue.push({ font, type: 'blank', key: blankKey });
-      }
-      if (!loadedFonts.has(font.id) && !queue.some(e => e.key === realKey)) {
-        queue.push({ font, type: 'real', key: realKey });
-      }
-      drainQueue();
+    function addFontFaceRule(family, weight, display, url) {
+      const sheet = fontStyleSheet.sheet;
+      sheet.insertRule(`@font-face {
+  font-family: '${family}';
+  font-weight: ${weight};
+  font-style: normal;
+  font-display: ${display};
+  src: url('${url}') format('woff2');
+}`, sheet.cssRules.length);
     }
 
-    // Enqueue blanks for a batch of fonts before their real fonts.
-    // This ensures all visible blanks load before any real fonts start.
-    function enqueueBatch(fonts) {
-      for (const font of fonts) {
-        const blankKey = font.id + '-blank';
-        if (!loadedBlanks.has(font.id) && !queue.some(e => e.key === blankKey)) {
-          queue.push({ font, type: 'blank', key: blankKey });
-        }
-      }
-      for (const font of fonts) {
-        const realKey = font.id + '-real';
-        if (!loadedFonts.has(font.id) && !queue.some(e => e.key === realKey)) {
-          queue.push({ font, type: 'real', key: realKey });
-        }
-      }
-      drainQueue();
-    }
+    async function activateFont(font) {
+      if (loadedFonts.has(font.id)) return;
+      loadedFonts.add(font.id);
 
-    async function drainQueue() {
-      if (queueRunning) return;
-      queueRunning = true;
-      while (queue.length > 0) {
-        const entry = queue.shift();
-        if (entry.type === 'blank') {
-          if (loadedBlanks.has(entry.font.id)) continue;
-          loadedBlanks.add(entry.font.id);
-          await loadBlankFont(entry.font);
-        } else {
-          if (loadedFonts.has(entry.font.id)) continue;
-          loadedFonts.add(entry.font.id);
-          await loadRealFont(entry.font);
-        }
-      }
-      queueRunning = false;
-    }
-
-    async function loadBlankFont(font) {
       const dir = fontDirName(font);
+
+      // Step 1: Inject blank @font-face and wait for it to load.
+      // Must be loaded BEFORE real font rule exists, so swap fallback = blank.
       const blankFile = getBlankFile(font);
-      const face = new FontFace(font.name + ' Blank',
-        `url('${FONT_BASE}/${dir}/${blankFile}')`,
-        { weight: '400', style: 'normal', display: 'block' }
-      );
-      try {
-        document.fonts.add(await face.load());
-      } catch {} // blank may not exist for all fonts
-    }
+      if (blankFile) {
+        const blankFamily = font.name + ' Blank';
+        addFontFaceRule(blankFamily, '400', 'block',
+          `${FONT_BASE}/${dir}/${blankFile}`);
+        try {
+          await document.fonts.load(`400 1em "${blankFamily}"`);
+        } catch {}
+      }
 
-    async function loadRealFont(font) {
-      const dir = fontDirName(font);
+      // Step 2: Now inject real font. Blank is loaded, so swap uses it.
       const weights = parseWeights(font);
       const target = weights.find(w => w.weight === 400) || weights[0];
       if (!target) return;
 
       const isVariable = isVariableFont(target.file);
-      const face = new FontFace(font.name,
-        `url('${FONT_BASE}/${dir}/${target.file}')`,
-        { weight: isVariable ? '100 900' : '400', style: 'normal', display: 'swap' }
-      );
-      try {
-        document.fonts.add(await face.load());
-      } catch (e) {
-        console.warn(`Failed to load ${font.name}:`, e);
-      }
+      addFontFaceRule(font.name, isVariable ? '100 900' : '400', 'swap',
+        `${FONT_BASE}/${dir}/${target.file}`);
+    }
+
+    function activateBatch(fonts) {
+      for (const font of fonts) activateFont(font);
     }
 
     // Load extra weights on demand (for detail panel)
-    async function loadFontWeight(font, weightNum) {
+    function loadFontWeight(font, weightNum) {
       const key = font.id + '-' + weightNum;
       if (loadedFonts.has(key)) return;
       loadedFonts.add(key);
@@ -745,15 +760,8 @@ const core = loader.getFontsByTag('core');</code></pre>
       const isVariable = isVariableFont(target.file);
       if (isVariable) return; // variable font already covers all weights
 
-      const face = new FontFace(font.name,
-        `url('${FONT_BASE}/${dir}/${target.file}')`,
-        { weight: String(weightNum), style: 'normal', display: 'swap' }
-      );
-      try {
-        document.fonts.add(await face.load());
-      } catch (e) {
-        console.warn(`Failed to load ${font.name} ${weightNum}:`, e);
-      }
+      addFontFaceRule(font.name, String(weightNum), 'swap',
+        `${FONT_BASE}/${dir}/${target.file}`);
     }
 
     // --- Rendering ---
@@ -776,7 +784,7 @@ const core = loader.getFontsByTag('core');</code></pre>
           <div class="font-card-name">${font.name}</div>
           <div class="font-card-meta">${font.category} · ${font.license}</div>
           <div class="font-card-preview" id="preview-${font.id}"
-               style="font-family: '${font.name}', '${font.name} Blank', system-ui">${PREVIEW_TEXT}</div>
+               style="font-family: '${font.name}', '${font.name} Blank'">${PREVIEW_TEXT}</div>
           <div class="font-card-tags">${tags}</div>
         `;
 
@@ -825,7 +833,7 @@ const core = loader.getFontsByTag('core');</code></pre>
 
       // Preview
       const preview = document.getElementById('detail-preview');
-      preview.style.fontFamily = `'${font.name}', '${font.name} Blank', system-ui`;
+      preview.style.fontFamily = `'${font.name}', '${font.name} Blank'`;
       preview.style.fontWeight = '400';
 
       // Weight selector buttons
@@ -868,7 +876,7 @@ const core = loader.getFontsByTag('core');</code></pre>
   }
 
   .your-text {
-    font-family: '${font.name}', '${font.name} Blank', sans-serif;
+    font-family: '${font.name}', '${font.name} Blank';
   }
 </style>`;
       document.getElementById('detail-preload').textContent = preloadCode;
@@ -904,7 +912,7 @@ const core = loader.getFontsByTag('core');</code></pre>
 }
 
 .your-text {
-  font-family: '${font.name}', sans-serif;
+  font-family: '${font.name}';
   font-weight: ${currentDetailWeight};
 }`;
       } else {
@@ -917,7 +925,7 @@ const core = loader.getFontsByTag('core');</code></pre>
        format('woff2');
 }`).join('\n\n');
         css += `\n\n.your-text {
-  font-family: '${font.name}', sans-serif;
+  font-family: '${font.name}';
   font-weight: ${currentDetailWeight};
 }`;
       }
@@ -955,7 +963,7 @@ const core = loader.getFontsByTag('core');</code></pre>
             observer.unobserve(entry.target);
           }
         }
-        if (batch.length > 0) enqueueBatch(batch);
+        if (batch.length > 0) activateBatch(batch);
       }, { rootMargin: '50px' });
 
       // Load catalog

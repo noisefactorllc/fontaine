@@ -49,7 +49,7 @@ Define `@font-face` rules in your CSS:
 }
 
 body {
-  font-family: 'Inter', sans-serif;
+  font-family: 'Inter';
 }
 ```
 
@@ -131,7 +131,7 @@ Add a placeholder font `@font-face` rule and include it in your fallback chain:
 }
 
 body {
-  font-family: 'Inter', 'Inter Blank', sans-serif;
+  font-family: 'Inter', 'Inter Blank';
 }
 ```
 
