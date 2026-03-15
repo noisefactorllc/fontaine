@@ -95,10 +95,9 @@ Many fonts include variable font versions (when available):
 
 Placeholder fonts are metric-matched fonts where every glyph has identical metrics to the
 source but simplified shapes. They load near-instantly (~3-15KB) and prevent layout shift
-when the real font loads. Three styles are available:
+when the real font loads. Two styles are available:
 
 - **Block**: Solid filled rectangles. A visible placeholder that shows where text will appear.
-- **Outline**: Thin-stroked rectangles. A lighter visible placeholder, less visually heavy than Block.
 - **Blank**: Empty glyphs with no visible shape. Reserves space invisibly so layout doesn't shift.
 
 ### Using Placeholder Fonts
@@ -122,14 +121,6 @@ Add a placeholder font `@font-face` rule and include it in your fallback chain:
   font-style: normal;
 }
 
-/* Outline style: visible light placeholder */
-@font-face {
-  font-family: 'Inter Outline';
-  src: url('https://fonts.noisefactor.io/fonts/inter/Inter-Outline.woff2') format('woff2');
-  font-weight: 400;
-  font-style: normal;
-}
-
 body {
   font-family: 'Inter', 'Inter Blank';
 }
@@ -137,7 +128,6 @@ body {
 
 Placeholder fonts follow the naming patterns:
 - `{FontName}-Block.woff2` (solid rectangles)
-- `{FontName}-Outline.woff2` (stroked rectangles)
 - `{FontName}-Blank.woff2` (empty glyphs)
 
 ### Building Placeholder Fonts
@@ -146,7 +136,7 @@ Placeholder fonts follow the naming patterns:
 python build_block_fonts.py
 ```
 
-This reads fonts from `.build/` and generates all three placeholder variants in `.build-block/`.
+This reads fonts from `.build/` and generates both placeholder variants in `.build-block/`.
 They are synced to S3 alongside regular fonts by `sync_fonts_to_s3.py`.
 
 ## CORS
