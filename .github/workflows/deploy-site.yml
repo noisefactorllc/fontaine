@@ -66,10 +66,10 @@ jobs:
             dist/site/ \
             deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisefactor.io/content/
 
-      - name: Purge CDN cache
-        if: success()
-        run: |
-          curl -sf -X POST https://api.github.com/repos/noisedeck/scaffold/dispatches \
-            -H "Authorization: token ${{ secrets.DEPLOY_PAT }}" \
-            -H "Accept: application/vnd.github.v3+json" \
-            -d '{"event_type":"cdn-purge","client_payload":{"repo":"noisedeck/fontaine","sha":"${{ github.sha }}"}}'
+  cdn-purge:
+    needs: deploy-site
+    uses: noisedeck/scaffold/.github/workflows/cdn-purge.yml@main
+    with:
+      repo: noisedeck/fontaine
+      sha: ${{ github.sha }}
+    secrets: inherit
