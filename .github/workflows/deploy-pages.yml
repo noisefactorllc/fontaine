@@ -41,3 +41,10 @@ jobs:
           DEST="deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisefactor.io/content/"
           rsync -avz dist/site/index.html "$DEST"
           rsync -avz dist/site/demo/ "${DEST}demo/"
+
+  cdn-purge:
+    needs: deploy-pages
+    uses: noisedeck/scaffold/.github/workflows/cdn-purge.yml@main
+    with:
+      domain: fonts.noisefactor.io
+    secrets: inherit

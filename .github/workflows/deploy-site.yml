@@ -70,6 +70,5 @@ jobs:
     needs: deploy-site
     uses: noisedeck/scaffold/.github/workflows/cdn-purge.yml@main
     with:
-      repo: noisedeck/fontaine
-      sha: ${{ github.sha }}
+      domain: fonts.noisefactor.io
     secrets: inherit

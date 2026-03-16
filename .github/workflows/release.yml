@@ -137,3 +137,10 @@ jobs:
           rsync -avz \
             dist/bundle/ \
             deploy@${{ secrets.SCAFFOLD_SERVER_IP }}:~/sites/fonts.noisefactor.io/content/bundle/
+
+  cdn-purge:
+    needs: build-and-release
+    uses: noisedeck/scaffold/.github/workflows/cdn-purge.yml@main
+    with:
+      domain: fonts.noisefactor.io
+    secrets: inherit
