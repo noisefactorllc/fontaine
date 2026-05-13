@@ -31,13 +31,18 @@ jobs:
             pip install -r requirements-dev.txt
           fi
 
-      - name: Install project
+      - name: Install project (optional — monolith repos may not be pip packages)
+        id: install_project
+        continue-on-error: true
         run: |
           if [ -f pyproject.toml ] && grep -qE '^\[project\]' pyproject.toml; then
             pip install -e ".[dev]" 2>/dev/null || pip install -e .
+          else
+            echo "No [project] table — skipping editable install"
           fi
 
       - name: Run pytest
+        if: steps.install_project.outcome == 'success'
         run: |
           if [ -d tests ] || grep -qE '^\[tool\.pytest' pyproject.toml 2>/dev/null; then
             pip install pytest
