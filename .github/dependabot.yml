@@ -8,12 +8,19 @@ updates:
       time: "08:00"
       timezone: "America/Denver"
     groups:
-      pip-dependencies:
+      pip-patches:
         patterns:
           - "*"
+        update-types:
+          - "patch"
+      pip-minor-major:
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "major"
     open-pull-requests-limit: 5
     commit-message:
       prefix: "deps"
     labels:
       - "dependencies"
-      - "automerge"
