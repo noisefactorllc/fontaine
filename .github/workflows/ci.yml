@@ -12,6 +12,13 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
+      # Audit-mode egress monitoring: records every outbound connection the
+      # runner makes so exfil/C2 from a compromised dependency is detectable.
+      - name: Harden runner
+        uses: step-security/harden-runner@ab7a9404c0f3da075243ca237b5fac12c98deaa5 # v2
+        with:
+          egress-policy: audit
+
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
