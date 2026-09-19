@@ -2,7 +2,23 @@ name: ci
 
 on:
   pull_request:
+    paths-ignore:
+      - '*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE*'
+      - '.github/FUNDING.yml'
+      - '.github/CODEOWNERS'
+      - '.editorconfig'
+      - 'docs/**'
   push:
+    paths-ignore:
+      - '*.md'
+      - '.github/ISSUE_TEMPLATE/**'
+      - '.github/PULL_REQUEST_TEMPLATE*'
+      - '.github/FUNDING.yml'
+      - '.github/CODEOWNERS'
+      - '.editorconfig'
+      - 'docs/**'
     branches: [main]
 
 permissions:
