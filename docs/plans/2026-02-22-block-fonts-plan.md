@@ -264,7 +264,7 @@ if __name__ == "__main__":
 
 **Step 2: Run the generator**
 
-Run: `cd /Users/aayars/source/fontaine && python build_block_fonts.py`
+Run: `python build_block_fonts.py`
 Expected: Generates block fonts in `.build-block/`, reports ~2-8KB per font.
 
 **Step 3: Verify output**
@@ -350,7 +350,7 @@ After the existing font sync loop (after the `for font_dir in sorted(BUILD_DIR.i
 
 **Step 2: Test with dry run**
 
-Run: `cd /Users/aayars/source/fontaine && python sync_fonts_to_s3.py --dry-run`
+Run: `python sync_fonts_to_s3.py --dry-run`
 Expected: Shows block fonts would be uploaded to the same S3 directories as regular fonts.
 
 **Step 3: Commit**
@@ -365,7 +365,7 @@ git commit -m "feat: sync block fonts to S3 alongside regular fonts"
 ### Task 3: Update generative-toys-website fonts
 
 **Files:**
-- Modify: `/Users/aayars/source/generative-toys-website/public/css/index.css`
+- Modify: `../generative-toys-website/public/css/index.css`
 
 **Step 1: Add block font @font-face and update fallback chain**
 
@@ -393,7 +393,7 @@ Also remove the `<link rel="preload">` tag for Nunito from the HTML if present (
 **Step 2: Commit**
 
 ```bash
-cd /Users/aayars/source/generative-toys-website
+cd ../generative-toys-website
 git add -A && git commit -m "feat: add block font fallback for zero-CLS font loading"
 ```
 
@@ -402,7 +402,7 @@ git add -A && git commit -m "feat: add block font fallback for zero-CLS font loa
 ### Task 4: Update noisedeck fonts
 
 **Files:**
-- Modify: `/Users/aayars/source/noisedeck/app/css/theme.css`
+- Modify: `../noisedeck/app/css/theme.css`
 
 **Step 1: Add block font @font-face rules**
 
@@ -436,7 +436,7 @@ And update body/general font-family rules to add `'Nunito Block'` after `Nunito`
 **Step 3: Commit**
 
 ```bash
-cd /Users/aayars/source/noisedeck
+cd ../noisedeck
 git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font loading"
 ```
 
@@ -445,8 +445,8 @@ git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font lo
 ### Task 5: Update polymorphic fonts
 
 **Files:**
-- Modify: `/Users/aayars/source/polymorphic/public/index.html` (inline `<style>`)
-- Modify: `/Users/aayars/source/polymorphic/public/css/menu.css`
+- Modify: `../polymorphic/public/index.html` (inline `<style>`)
+- Modify: `../polymorphic/public/css/menu.css`
 
 **Step 1: Add block font @font-face in index.html `<style>`**
 
@@ -485,7 +485,7 @@ Remove `<link rel="preconnect" href="https://fonts.noisefactor.io" crossorigin>`
 **Step 3: Commit**
 
 ```bash
-cd /Users/aayars/source/polymorphic
+cd ../polymorphic
 git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font loading"
 ```
 
@@ -494,7 +494,7 @@ git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font lo
 ### Task 6: Update foundry fonts
 
 **Files:**
-- Modify: `/Users/aayars/source/foundry/public/css/fonts.css`
+- Modify: `../foundry/public/css/fonts.css`
 
 **Step 1: Add block font @font-face rules**
 
@@ -536,7 +536,7 @@ Leave `--font-icon` unchanged (Material Symbols uses `font-display: block`).
 **Step 3: Commit**
 
 ```bash
-cd /Users/aayars/source/foundry
+cd ../foundry
 git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font loading"
 ```
 
@@ -545,7 +545,7 @@ git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font lo
 ### Task 7: Update shade fonts
 
 **Files:**
-- Modify: `/Users/aayars/source/shade/public/css/fonts.css`
+- Modify: `../shade/public/css/fonts.css`
 
 **Step 1: Add block font @font-face rules**
 
@@ -584,7 +584,7 @@ git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font lo
 **Step 3: Commit**
 
 ```bash
-cd /Users/aayars/source/shade
+cd ../shade
 git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font loading"
 ```
 
@@ -593,7 +593,7 @@ git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font lo
 ### Task 8: Update layers fonts
 
 **Files:**
-- Modify: `/Users/aayars/source/layers/public/css/fonts.css`
+- Modify: `../layers/public/css/fonts.css`
 
 **Step 1: Add block font @font-face rules**
 
@@ -631,7 +631,7 @@ git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font lo
 **Step 3: Commit**
 
 ```bash
-cd /Users/aayars/source/layers
+cd ../layers
 git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font loading"
 ```
 
@@ -640,7 +640,7 @@ git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font lo
 ### Task 9: Update tetra fonts
 
 **Files:**
-- Modify: `/Users/aayars/source/tetra/app/css/index.css`
+- Modify: `../tetra/app/css/index.css`
 
 **Step 1: Add block font @font-face rules**
 
@@ -678,7 +678,7 @@ font-family: 'Nunito', 'Nunito Block', -apple-system, BlinkMacSystemFont, 'Segoe
 **Step 3: Commit**
 
 ```bash
-cd /Users/aayars/source/tetra
+cd ../tetra
 git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font loading"
 ```
 
@@ -687,7 +687,7 @@ git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font lo
 ### Task 10: Update blaster fonts
 
 **Files:**
-- Modify: `/Users/aayars/source/blaster/frontend/css/index.css`
+- Modify: `../blaster/frontend/css/index.css`
 
 **Step 1: Add block font @font-face rules**
 
@@ -721,7 +721,7 @@ And for the logotype:
 **Step 3: Commit**
 
 ```bash
-cd /Users/aayars/source/blaster
+cd ../blaster
 git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font loading"
 ```
 
@@ -730,8 +730,8 @@ git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font lo
 ### Task 11: Update sharing-is-caring fonts
 
 **Files:**
-- Modify: `/Users/aayars/source/sharing-is-caring/public/index.html`
-- Modify: `/Users/aayars/source/sharing-is-caring/public/create.html`
+- Modify: `../sharing-is-caring/public/index.html`
+- Modify: `../sharing-is-caring/public/create.html`
 
 **Step 1: Add block font @font-face in both HTML files' `<style>` blocks**
 
@@ -756,7 +756,7 @@ Remove `<link rel="preload" ...Nunito...>` tags (block font replaces this).
 **Step 3: Commit**
 
 ```bash
-cd /Users/aayars/source/sharing-is-caring
+cd ../sharing-is-caring
 git add -A && git commit -m "feat: add block font fallback for zero-CLS font loading"
 ```
 
@@ -765,7 +765,7 @@ git add -A && git commit -m "feat: add block font fallback for zero-CLS font loa
 ### Task 12: Update shuffleset.stream fonts
 
 **Files:**
-- Modify: `/Users/aayars/source/shuffleset.stream/public/css/base.css`
+- Modify: `../shuffleset.stream/public/css/base.css`
 
 **Step 1: Add block font @font-face rules**
 
@@ -797,7 +797,7 @@ h1, h2, h3, h4, h5, h6 { font-family: Rubik, 'Rubik Block', sans-serif; }
 **Step 3: Commit**
 
 ```bash
-cd /Users/aayars/source/shuffleset.stream
+cd ../shuffleset.stream
 git add -A && git commit -m "feat: add block font fallbacks for zero-CLS font loading"
 ```
 
@@ -854,7 +854,6 @@ They are synced to S3 alongside regular fonts by `sync_fonts_to_s3.py`.
 **Step 2: Commit**
 
 ```bash
-cd /Users/aayars/source/fontaine
 git add WEB-FONTS.md
 git commit -m "docs: add block fonts documentation to WEB-FONTS.md"
 ```
@@ -866,7 +865,6 @@ git commit -m "docs: add block fonts documentation to WEB-FONTS.md"
 **Step 1: Generate all block fonts**
 
 ```bash
-cd /Users/aayars/source/fontaine
 python build_block_fonts.py
 ```
 
