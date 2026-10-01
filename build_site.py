@@ -24,6 +24,7 @@ def build_site():
 
     index_path = dist_dir / "index.html"
     shutil.copy(landing_path, index_path)
+    shutil.copy(script_dir / "favicon.png", dist_dir / "favicon.png")
     print(f"✓ Created {index_path}")
     print(f"  Source: {landing_path}")
     print(f"  Size: {index_path.stat().st_size:,} bytes")
