@@ -1,0 +1,5 @@
+#!/bin/sh
+# Test entrypoint for fontaine. Runs the loader's node:test suite.
+set -e
+cd "$(dirname "$0")/.."
+exec node --test test_font_loader.js

@@ -3,6 +3,8 @@ const test = require('node:test');
 
 const FontLoader = require('./font-loader.js');
 
+const BUNDLE_SHA256 = '4bf5122f344554c53bde2ebb8cd2b7e3d1600ad631c385a5d7cce23c7785459a';
+
 class CacheTestLoader extends FontLoader {
   constructor(installedVersion, installedBundleSha256) {
     super();
@@ -78,7 +80,7 @@ test('load downloads a changed bundle when its version is unchanged', async (t) 
         version: 7,
         version_date: '2026-08-23T00:00:00Z',
         bundle_size: 1,
-        bundle_sha256: 'new-sha',
+        bundle_sha256: BUNDLE_SHA256,
       });
     }
     if (url.endsWith('/fonts.json')) {
@@ -98,8 +100,43 @@ test('load downloads a changed bundle when its version is unchanged', async (t) 
   assert.deepEqual(loader.savedVersion, {
     version: 7,
     versionDate: '2026-08-23T00:00:00Z',
-    bundleSha256: 'new-sha',
+    bundleSha256: BUNDLE_SHA256,
   });
+});
+
+test('load rejects a bundle whose bytes do not match the manifest sha256', async (t) => {
+  const originalFetch = global.fetch;
+  t.after(() => {
+    global.fetch = originalFetch;
+  });
+
+  let extracted = false;
+  class CorruptBundleLoader extends CacheTestLoader {
+    async extractBundle() {
+      extracted = true;
+    }
+  }
+
+  global.fetch = async (url) => {
+    if (url.endsWith('/manifest.json')) {
+      return jsonResponse({
+        version: 7,
+        version_date: '2026-08-23T00:00:00Z',
+        bundle_size: 1,
+        bundle_sha256: 'deadbeef',
+      });
+    }
+    if (url.endsWith('/fonts.json')) {
+      return jsonResponse({ fonts: [] });
+    }
+    return bundleResponse();
+  };
+
+  const loader = new CorruptBundleLoader(6, null);
+
+  await assert.rejects(loader.load('/bundle'), /integrity/i);
+  assert.equal(extracted, false);
+  assert.equal(loader.savedVersion, null);
 });
 
 test('load reuses cache when both version and bundle hash match', async (t) => {

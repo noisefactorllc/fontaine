@@ -220,7 +220,21 @@ class FontLoader {
 
     // Combine chunks into blob
     const zipBlob = new Blob(chunks);
-    
+
+    // Verify the downloaded bundle against the manifest's declared sha256
+    // before extracting or persisting anything, so a truncated or corrupted
+    // download fails here instead of flowing into IndexedDB. Skipped when the
+    // manifest declares no hash or when crypto.subtle is unavailable
+    // (e.g. non-secure-context pages).
+    if (manifest.bundle_sha256 && typeof crypto !== 'undefined' && crypto.subtle) {
+      onProgress(70, 'Verifying bundle...');
+      const digest = await crypto.subtle.digest('SHA-256', await zipBlob.arrayBuffer());
+      const actualSha256 = Array.from(new Uint8Array(digest), b => b.toString(16).padStart(2, '0')).join('');
+      if (actualSha256 !== manifest.bundle_sha256.toLowerCase()) {
+        throw new Error(`Bundle integrity check failed: expected sha256 ${manifest.bundle_sha256}, got ${actualSha256}`);
+      }
+    }
+
     // Extract using JSZip (loaded dynamically if needed)
     await this.extractBundle(zipBlob, onProgress);
 
