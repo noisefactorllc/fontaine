@@ -30,6 +30,7 @@ import urllib.error
 import io
 import os
 from pathlib import Path
+from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
 from typing import Optional
 import sys
@@ -435,21 +436,38 @@ def derive_bundle_version(fonts: list, bundle_sha256: str) -> int:
     return int(hashlib.sha256(payload).hexdigest()[:13], 16)
 
 
-def build_catalog_and_manifest(fonts: list, zip_size: int, zip_hash: str) -> tuple:
+def bundle_version_date(epoch: int = None) -> str:
+    """Deterministic version_date for the generated metadata.
+
+    Follows the reproducible-builds convention: SOURCE_DATE_EPOCH when
+    set, otherwise the Unix epoch. The field stays present in
+    fonts.json/manifest.json (FontLoader persists manifest.version_date
+    as versionDate) but no longer tracks the local build time, so
+    unchanged content produces byte-identical artifacts.
+    """
+    if epoch is None:
+        epoch = int(os.environ.get("SOURCE_DATE_EPOCH") or 0)
+    return datetime.fromtimestamp(epoch, tz=timezone.utc).isoformat()
+
+
+def build_catalog_and_manifest(fonts: list, zip_size: int, zip_hash: str,
+                               version_date: str = None) -> tuple:
     """Assemble the fonts.json catalog and manifest.json dicts.
 
-    Pure function of its inputs: it contains no wall-clock fields, so
-    repeated builds of identical font content produce byte-identical
-    fonts.json and manifest.json artifacts. The former build-time
-    version_date was dropped for the same reason — with content-derived
-    versioning there is no per-build date, and FontLoader only reads
-    version and bundle_sha256 from the manifest.
+    Pure function of its inputs (version_date defaults to the
+    deterministic bundle_version_date()), so repeated builds of
+    identical font content produce byte-identical fonts.json and
+    manifest.json artifacts while preserving the metadata contract
+    FontLoader consumes (version, version_date, bundle_sha256).
     """
     version = derive_bundle_version(fonts, zip_hash)
+    if version_date is None:
+        version_date = bundle_version_date()
 
     catalog = {
         "name": "fontaine",
         "version": version,
+        "version_date": version_date,
         "total_fonts": len(fonts),
         "fonts": fonts
     }
@@ -457,6 +475,7 @@ def build_catalog_and_manifest(fonts: list, zip_size: int, zip_hash: str) -> tup
     manifest = {
         "name": "fontaine",
         "version": version,
+        "version_date": version_date,
         "bundle_file": "fonts.zip",
         "bundle_size": zip_size,
         "bundle_sha256": zip_hash,

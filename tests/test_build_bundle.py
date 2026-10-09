@@ -189,12 +189,26 @@ class FullOutputDeterminismTest(unittest.TestCase):
         self.assertEqual(json.dumps(first[0], indent=2), json.dumps(second[0], indent=2))
         self.assertEqual(json.dumps(first[1], indent=2), json.dumps(second[1], indent=2))
 
-    def test_generated_metadata_has_no_wall_clock_fields(self):
+    def test_version_date_is_deterministic_and_compatible(self):
+        # version_date stays in the metadata contract (FontLoader persists
+        # manifest.version_date) but must not track the build clock.
         catalog, manifest = build_bundle.build_catalog_and_manifest(
             self.sample_fonts(), 1234, "hash-one")
-        for key in ("version_date", "built_at", "timestamp", "date"):
-            self.assertNotIn(key, catalog)
-            self.assertNotIn(key, manifest)
+        self.assertEqual(catalog["version_date"], manifest["version_date"])
+        # Reproducible-builds default: Unix epoch when SOURCE_DATE_EPOCH
+        # is unset, so the value is identical on every machine.
+        self.assertEqual(manifest["version_date"],
+                         build_bundle.bundle_version_date(0))
+        self.assertEqual(build_bundle.bundle_version_date(0),
+                         "1970-01-01T00:00:00+00:00")
+
+    def test_source_date_epoch_overrides_version_date(self):
+        date = build_bundle.bundle_version_date(1600000000)
+        self.assertEqual(date, "2020-09-13T12:26:40+00:00")
+        catalog, manifest = build_bundle.build_catalog_and_manifest(
+            self.sample_fonts(), 1234, "hash-one", version_date=date)
+        self.assertEqual(catalog["version_date"], date)
+        self.assertEqual(manifest["version_date"], date)
 
     def test_full_outputs_identical_across_python_processes(self):
         # End-to-end: zip + catalog + manifest assembled in two separate
