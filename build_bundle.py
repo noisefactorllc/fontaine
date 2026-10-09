@@ -30,7 +30,6 @@ import urllib.error
 import io
 import os
 from pathlib import Path
-from datetime import datetime, timezone
 from dataclasses import dataclass, asdict
 from typing import Optional
 import sys
@@ -435,6 +434,50 @@ def derive_bundle_version(fonts: list, bundle_sha256: str) -> int:
     payload += b"\0" + bundle_sha256.encode("ascii")
     return int(hashlib.sha256(payload).hexdigest()[:13], 16)
 
+
+def build_catalog_and_manifest(fonts: list, zip_size: int, zip_hash: str) -> tuple:
+    """Assemble the fonts.json catalog and manifest.json dicts.
+
+    Pure function of its inputs: it contains no wall-clock fields, so
+    repeated builds of identical font content produce byte-identical
+    fonts.json and manifest.json artifacts. The former build-time
+    version_date was dropped for the same reason — with content-derived
+    versioning there is no per-build date, and FontLoader only reads
+    version and bundle_sha256 from the manifest.
+    """
+    version = derive_bundle_version(fonts, zip_hash)
+
+    catalog = {
+        "name": "fontaine",
+        "version": version,
+        "total_fonts": len(fonts),
+        "fonts": fonts
+    }
+
+    manifest = {
+        "name": "fontaine",
+        "version": version,
+        "bundle_file": "fonts.zip",
+        "bundle_size": zip_size,
+        "bundle_sha256": zip_hash,
+        "catalog_file": "fonts.json",
+        "total_fonts": len(fonts),
+        "categories": {
+            "core": len([f for f in fonts if "core" in f["tags"]]),
+            "quirky": len([f for f in fonts if "quirky" in f["tags"]]),
+        },
+        "styles": {
+            "sans-serif": len([f for f in fonts if "sans-serif" in f["tags"]]),
+            "serif": len([f for f in fonts if "serif" in f["tags"]]),
+            "monospace": len([f for f in fonts if "monospace" in f["tags"]]),
+            "handwritten": len([f for f in fonts if "handwritten" in f["tags"]]),
+            "display": len([f for f in fonts if "display" in f["tags"]]),
+            "special": len([f for f in fonts if f["category"] == "special"]),
+        }
+    }
+
+    return catalog, manifest
+
 def scan_woff2_fonts(woff2_dir: Path) -> list:
     """Scan WOFF2 build directory and build font catalog."""
     fonts = []
@@ -536,56 +579,25 @@ def build_bundle():
     zip_path, zip_size, zip_hash = create_zip_bundle(fonts, woff2_dir)
     print(f"Created: {zip_path}")
     print(f"Size: {zip_size / 1024 / 1024:.1f} MB")
-    
-    # Version is derived from bundle content (see derive_bundle_version):
-    # unchanged fonts keep the same version + sha256, so FontLoader's
-    # "already up to date" path stays effective across rebuilds.
-    version = derive_bundle_version(fonts, zip_hash)
-    version_date = datetime.now(timezone.utc).isoformat()
-    
-    # Create catalog
-    catalog = {
-        "name": "fontaine",
-        "version": version,
-        "version_date": version_date,
-        "total_fonts": len(fonts),
-        "fonts": fonts
-    }
-    
+
+    # Assemble the catalog and manifest. Both are pure functions of the
+    # bundle content (see derive_bundle_version): unchanged fonts keep
+    # the same version + sha256 and byte-identical artifacts, so
+    # FontLoader's "already up to date" path stays effective across
+    # rebuilds.
+    catalog, manifest = build_catalog_and_manifest(fonts, zip_size, zip_hash)
+    version = manifest["version"]
+
     catalog_path = BUNDLE_DIR / "fonts.json"
     with open(catalog_path, "w") as f:
         json.dump(catalog, f, indent=2)
     print(f"Created: {catalog_path}")
-    
-    # Create manifest
-    manifest = {
-        "name": "fontaine",
-        "version": version,
-        "version_date": version_date,
-        "bundle_file": "fonts.zip",
-        "bundle_size": zip_size,
-        "bundle_sha256": zip_hash,
-        "catalog_file": "fonts.json",
-        "total_fonts": len(fonts),
-        "categories": {
-            "core": len([f for f in fonts if "core" in f["tags"]]),
-            "quirky": len([f for f in fonts if "quirky" in f["tags"]]),
-        },
-        "styles": {
-            "sans-serif": len([f for f in fonts if "sans-serif" in f["tags"]]),
-            "serif": len([f for f in fonts if "serif" in f["tags"]]),
-            "monospace": len([f for f in fonts if "monospace" in f["tags"]]),
-            "handwritten": len([f for f in fonts if "handwritten" in f["tags"]]),
-            "display": len([f for f in fonts if "display" in f["tags"]]),
-            "special": len([f for f in fonts if f["category"] == "special"]),
-        }
-    }
-    
+
     manifest_path = BUNDLE_DIR / "manifest.json"
     with open(manifest_path, "w") as f:
         json.dump(manifest, f, indent=2)
     print(f"Created: {manifest_path}")
-    
+
     # Summary
     print()
     print("=" * 60)
@@ -593,7 +605,6 @@ def build_bundle():
     print("=" * 60)
     print()
     print(f"Version:     {version}")
-    print(f"Date:        {version_date}")
     print(f"Total fonts: {len(fonts)}")
     print(f"Bundle size: {zip_size / 1024 / 1024:.1f} MB")
     print()

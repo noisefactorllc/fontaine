@@ -7,8 +7,11 @@ instead of re-downloading on every rebuild.
 """
 
 import json
+import os
+import subprocess
 import sys
 import tempfile
+import textwrap
 import unittest
 import zipfile
 from pathlib import Path
@@ -141,6 +144,94 @@ class CatalogDeterminismTest(unittest.TestCase):
         # tag under the old set()-based dedupe contract; it must appear once.
         tags = build_bundle.get_tags(51, "Demo", "quirky")
         self.assertEqual(tags.count("quirky"), 1)
+
+
+class FullOutputDeterminismTest(unittest.TestCase):
+    """fonts.json and manifest.json bytes must not vary between builds."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.addCleanup(self.tmp.cleanup)
+        self.base = Path(self.tmp.name)
+
+    def sample_fonts(self):
+        return [
+            {
+                "id": "01-demo",
+                "name": "Demo Font",
+                "dir_name": "01-demo",
+                "category": build_bundle.get_tags(1, "Demo Font", "serif")[1],
+                "style": "serif",
+                "tags": build_bundle.get_tags(1, "Demo Font", "serif"),
+                "license": "OFL-1.1",
+                "files": [
+                    {"filename": "regular.woff2", "size": 4, "sha256": "aa" * 32},
+                    {"filename": "italic.woff2", "size": 4, "sha256": "bb" * 32},
+                ],
+            },
+            {
+                "id": "02-quirky",
+                "name": "Quirky Condensed",
+                "dir_name": "02-quirky",
+                "category": build_bundle.get_tags(52, "Quirky Condensed", "display")[1],
+                "style": "display",
+                "tags": build_bundle.get_tags(52, "Quirky Condensed", "display"),
+                "license": "MIT",
+                "files": [{"filename": "regular.woff2", "size": 7, "sha256": "cc" * 32}],
+            },
+        ]
+
+    def test_repeated_assembly_produces_identical_artifact_bytes(self):
+        fonts = self.sample_fonts()
+        first = build_bundle.build_catalog_and_manifest(fonts, 1234, "hash-one")
+        second = build_bundle.build_catalog_and_manifest(fonts, 1234, "hash-one")
+
+        self.assertEqual(json.dumps(first[0], indent=2), json.dumps(second[0], indent=2))
+        self.assertEqual(json.dumps(first[1], indent=2), json.dumps(second[1], indent=2))
+
+    def test_generated_metadata_has_no_wall_clock_fields(self):
+        catalog, manifest = build_bundle.build_catalog_and_manifest(
+            self.sample_fonts(), 1234, "hash-one")
+        for key in ("version_date", "built_at", "timestamp", "date"):
+            self.assertNotIn(key, catalog)
+            self.assertNotIn(key, manifest)
+
+    def test_full_outputs_identical_across_python_processes(self):
+        # End-to-end: zip + catalog + manifest assembled in two separate
+        # interpreter processes with different hash seeds (string hashing
+        # is randomized per process) must yield identical artifact bytes.
+        snippet = textwrap.dedent("""
+            import json, pathlib, sys
+            sys.path.insert(0, %r)
+            import build_bundle
+            fonts = json.loads(sys.argv[1])
+            zip_path, size, sha = build_bundle.create_zip_bundle(
+                fonts, pathlib.Path(sys.argv[2]), pathlib.Path(sys.argv[3]))
+            catalog, manifest = build_bundle.build_catalog_and_manifest(
+                fonts, size, sha)
+            print(json.dumps({"catalog": catalog, "manifest": manifest,
+                              "sha256": sha}))
+        """) % str(Path(build_bundle.__file__).resolve().parent)
+
+        fonts = self.sample_fonts()
+        outputs = []
+        for i, seed in enumerate(("1", "7")):
+            tree = self.base / f"build-{i}"
+            for font in fonts:
+                for file_info in font["files"]:
+                    target = tree / font["dir_name"] / file_info["filename"]
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    target.write_bytes(b"font-" + font["id"].encode())
+            env = dict(os.environ, PYTHONHASHSEED=seed)
+            result = subprocess.run(
+                [sys.executable, "-c", snippet, json.dumps(fonts), str(tree),
+                 str(self.base / f"fonts-{i}.zip")],
+                capture_output=True, text=True, env=env, check=True)
+            outputs.append(json.loads(result.stdout.strip().splitlines()[-1]))
+
+        self.assertEqual(outputs[0]["catalog"], outputs[1]["catalog"])
+        self.assertEqual(outputs[0]["manifest"], outputs[1]["manifest"])
+        self.assertEqual(outputs[0]["sha256"], outputs[1]["sha256"])
 
 
 if __name__ == "__main__":
