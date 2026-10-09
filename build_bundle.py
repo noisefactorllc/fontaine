@@ -6,7 +6,14 @@ Builds a distributable font bundle from the downloaded fonts in dist/.
 Creates:
   - bundle/fonts.json: Catalog with metadata, tags, and file listings
   - bundle/fonts.zip: Compressed archive of all font files
-  - bundle/manifest.json: Bundle manifest with version (unix timestamp)
+  - bundle/manifest.json: Bundle manifest with version
+
+The build is deterministic: identical font content produces byte-identical
+artifacts, and the manifest version is derived from the bundle content
+(zip hash + catalog) instead of the wall clock. FontLoader treats the
+version as an opaque cache key, so an unchanged font set keeps the same
+version + sha256 and clients reuse their IndexedDB cache instead of
+re-downloading the bundle on every rebuild.
 
 Font style is classified using OpenAI Vision API to analyze rendered samples.
 
@@ -17,7 +24,6 @@ MIT License
 import json
 import zipfile
 import hashlib
-import time
 import base64
 import urllib.request
 import urllib.error
@@ -32,8 +38,8 @@ import sys
 try:
     from fontTools.ttLib import TTFont
 except ImportError:
-    print("Error: fontTools required. Install with: pip install fonttools")
-    sys.exit(1)
+    TTFont = None  # Checked in build_bundle(); keeps this module importable
+                   # (e.g. by the test suite) without fontTools installed.
 
 # ============================================================================
 # Configuration
@@ -84,30 +90,39 @@ def get_font_number(dir_name: str) -> int:
         return 0
 
 def get_tags(font_num: int, name: str, style: str) -> list:
-    """Generate tags for a font based on extracted style and position."""
+    """Generate tags for a font based on extracted style and position.
+
+    The returned list is deterministically ordered so repeated builds
+    produce identical catalog bytes (set iteration order is not stable
+    across Python processes).
+    """
     tags = []
-    
+
+    def add_tag(tag):
+        if tag not in tags:
+            tags.append(tag)
+
     # Core vs quirky based on font number
     if font_num <= 50:
-        tags.append("core")
+        add_tag("core")
     else:
-        tags.append("quirky")
-    
+        add_tag("quirky")
+
     # Style tag from extracted metadata
-    tags.append(style)
-    
+    add_tag(style)
+
     # Variable font detection from filename
     name_lower = name.lower()
     if "variable" in name_lower or "flex" in name_lower:
-        tags.append("variable")
-    
+        add_tag("variable")
+
     # Specific feature tags from name
     if "condensed" in name_lower:
-        tags.append("condensed")
+        add_tag("condensed")
     if name.endswith(" SC") or " SC " in name:
-        tags.append("small-caps")
-    
-    return list(set(tags))  # Remove duplicates
+        add_tag("small-caps")
+
+    return tags
 
 # ============================================================================
 # Font metadata dataclasses
@@ -259,7 +274,9 @@ def get_woff2_font_files(font_dir: Path) -> list:
     """Get list of WOFF2 font files with metadata."""
     files = []
     
-    for f in font_dir.rglob("*.woff2"):
+    # Sorted so the catalog (and anything derived from it, like the
+    # content-version hash) is stable regardless of directory order.
+    for f in sorted(font_dir.rglob("*.woff2")):
         if f.is_file():
             rel_path = f.relative_to(font_dir)
             files.append(FontFile(
@@ -275,7 +292,9 @@ def get_font_files(font_dir: Path) -> list:
     font_extensions = {".ttf", ".otf", ".woff", ".woff2", ".ttc"}
     files = []
     
-    for f in font_dir.rglob("*"):
+    # Sorted so the catalog (and anything derived from it, like the
+    # content-version hash) is stable regardless of directory order.
+    for f in sorted(font_dir.rglob("*")):
         if f.is_file() and f.suffix.lower() in font_extensions:
             # Get path relative to font_dir
             rel_path = f.relative_to(font_dir)
@@ -353,27 +372,68 @@ def scan_fonts() -> list:
 # Bundle creation
 # ============================================================================
 
-def create_zip_bundle(fonts: list, source_dir: Path) -> tuple:
-    """Create ZIP archive of all font files. Returns (path, size, hash)."""
-    zip_path = BUNDLE_DIR / "fonts.zip"
-    
+# Fixed timestamp for zip entry metadata (1980-01-01, the zip epoch).
+# Zip entries default to the source file's mtime, which changes every
+# time fonts are re-downloaded, so archive bytes would differ between
+# rebuilds of identical content. Fonts ship with `immutable` caching and
+# FontLoader verifies the bundle sha256, so a fixed stamp is safe.
+ZIP_EPOCH = (1980, 1, 1, 0, 0, 0)
+
+
+def create_zip_bundle(fonts: list, source_dir: Path, zip_path: Path = None) -> tuple:
+    """Create ZIP archive of all font files. Returns (path, size, hash).
+
+    The archive is byte-for-byte deterministic for identical font
+    content: entries are sorted by path and written with fixed metadata,
+    independent of filesystem mtimes.
+    """
+    zip_path = zip_path or (BUNDLE_DIR / "fonts.zip")
+
     print("Creating fonts.zip...")
-    
+
+    # Collect then sort by archive path so entry order is deterministic
+    # regardless of catalog iteration order.
+    entries = []
+    for font in fonts:
+        font_dir = source_dir / font["dir_name"]
+
+        for file_info in font["files"]:
+            file_path = font_dir / file_info["filename"]
+            if file_path.exists():
+                # Store with path: dir_name/filename
+                arc_name = f"{font['dir_name']}/{file_info['filename']}"
+                entries.append((arc_name, file_path))
+    entries.sort(key=lambda entry: entry[0])
+
     with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED, compresslevel=9) as zf:
-        for font in fonts:
-            font_dir = source_dir / font["dir_name"]
-            
-            for file_info in font["files"]:
-                file_path = font_dir / file_info["filename"]
-                if file_path.exists():
-                    # Store with path: dir_name/filename
-                    arc_name = f"{font['dir_name']}/{file_info['filename']}"
-                    zf.write(file_path, arc_name)
-    
+        for arc_name, file_path in entries:
+            info = zipfile.ZipInfo(arc_name, date_time=ZIP_EPOCH)
+            info.compress_type = zipfile.ZIP_DEFLATED
+            info.external_attr = 0o644 << 16
+            info.create_system = 3  # Fixed so archives match across platforms
+            with open(file_path, "rb") as f:
+                zf.writestr(info, f.read())
+
     size = zip_path.stat().st_size
     file_hash = hash_file(zip_path)
-    
+
     return zip_path, size, file_hash
+
+
+def derive_bundle_version(fonts: list, bundle_sha256: str) -> int:
+    """Derive the bundle version from bundle content.
+
+    FontLoader uses the version (together with bundle_sha256) as its
+    cache key, so the version must change exactly when the bundle
+    changes. A wall-clock version invalidated every client's cache on
+    every rebuild, even when no font changed. Hashing the catalog plus
+    the zip hash makes the version a pure function of content; the
+    result is truncated to 52 bits so it stays exact as a JavaScript
+    Number (JSON consumers, e.g. FontLoader's version comparison).
+    """
+    payload = json.dumps(fonts, sort_keys=True).encode("utf-8")
+    payload += b"\0" + bundle_sha256.encode("ascii")
+    return int(hashlib.sha256(payload).hexdigest()[:13], 16)
 
 def scan_woff2_fonts(woff2_dir: Path) -> list:
     """Scan WOFF2 build directory and build font catalog."""
@@ -438,6 +498,10 @@ def scan_woff2_fonts(woff2_dir: Path) -> list:
 
 def build_bundle():
     """Build the complete font bundle."""
+    if TTFont is None:
+        print("Error: fontTools required. Install with: pip install fonttools")
+        sys.exit(1)
+
     print()
     print("═" * 60)
     print("  f o n t a i n e  —  Bundle Builder")
@@ -473,9 +537,11 @@ def build_bundle():
     print(f"Created: {zip_path}")
     print(f"Size: {zip_size / 1024 / 1024:.1f} MB")
     
-    # Generate version (unix timestamp)
-    version = int(time.time())
-    version_date = datetime.fromtimestamp(version, tz=timezone.utc).isoformat()
+    # Version is derived from bundle content (see derive_bundle_version):
+    # unchanged fonts keep the same version + sha256, so FontLoader's
+    # "already up to date" path stays effective across rebuilds.
+    version = derive_bundle_version(fonts, zip_hash)
+    version_date = datetime.now(timezone.utc).isoformat()
     
     # Create catalog
     catalog = {
