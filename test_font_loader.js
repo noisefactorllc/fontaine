@@ -293,3 +293,98 @@ test('clearCache removes registrations and revokes their blob URLs', async (t) =
   assert.deepEqual(env.revokedObjectUrls, env.createdObjectUrls);
   assert.equal(loader.registeredFonts.size, 0);
 });
+
+test('load clears registrations after installing an updated bundle', async (t) => {
+  const env = fakeBrowserEnvironment();
+  const originalFetch = global.fetch;
+  t.after(() => {
+    global.fetch = originalFetch;
+    env.restore();
+  });
+
+  const catalogFonts = [
+    {
+      id: '01-demo',
+      name: 'Demo',
+      dir_name: '01-demo',
+      files: [{ filename: 'Demo-Regular.woff2' }],
+    },
+  ];
+
+  global.fetch = async (url) => {
+    if (url.endsWith('/manifest.json')) {
+      return jsonResponse({
+        version: 8,
+        version_date: '2026-10-10T00:00:00Z',
+        bundle_size: 1,
+        bundle_sha256: BUNDLE_SHA256,
+      });
+    }
+    if (url.endsWith('/fonts.json')) {
+      return jsonResponse({ fonts: catalogFonts });
+    }
+    return bundleResponse();
+  };
+
+  class UpdateTestLoader extends RegistrationTestLoader {
+    async getInstalledBundleMetadata() {
+      return { key: 'version', value: 7, bundleSha256: 'old-sha' };
+    }
+    async extractBundle() {}
+    async saveCatalog() {}
+    async setInstalledVersion() {}
+  }
+
+  const loader = new UpdateTestLoader();
+  assert.equal(await loader.registerFont('01-demo'), true);
+  const preUpdate = { style: env.appendedStyleElements[0], url: env.createdObjectUrls[0] };
+
+  // Installing version 8 replaces the cached file bytes, so the
+  // pre-update registration must not survive it.
+  assert.equal(await loader.load('/bundle'), true);
+  assert.equal(preUpdate.style.removed, true, 'stale style element is detached');
+  assert.deepEqual(env.revokedObjectUrls, [preUpdate.url]);
+  assert.equal(loader.registeredFonts.size, 0);
+
+  // Re-registering after the update builds a fresh registration from
+  // the newly stored files.
+  assert.equal(await loader.registerFont('01-demo'), true);
+  assert.equal(env.createdObjectUrls.length, 2);
+  assert.equal(env.appendedStyleElements.length, 2);
+  assert.equal(env.appendedStyleElements[1].removed, false);
+  assert.equal(loader.registeredFonts.size, 1);
+});
+
+test('load keeps registrations when the cached bundle is still current', async (t) => {
+  const env = fakeBrowserEnvironment();
+  const originalFetch = global.fetch;
+  t.after(() => {
+    global.fetch = originalFetch;
+    env.restore();
+  });
+
+  global.fetch = async (url) => {
+    if (url.endsWith('/manifest.json')) {
+      return jsonResponse({ version: 7, bundle_sha256: 'same-sha' });
+    }
+    throw new Error(`unexpected fetch: ${url}`);
+  };
+
+  class CurrentBundleLoader extends RegistrationTestLoader {
+    async getInstalledBundleMetadata() {
+      return { key: 'version', value: 7, bundleSha256: 'same-sha' };
+    }
+    async loadCatalogFromDB() {
+      return { fonts: this.catalog.fonts };
+    }
+  }
+
+  const loader = new CurrentBundleLoader();
+  assert.equal(await loader.registerFont('01-demo'), true);
+
+  assert.equal(await loader.load('/bundle'), false);
+
+  assert.equal(env.appendedStyleElements[0].removed, false);
+  assert.deepEqual(env.revokedObjectUrls, []);
+  assert.equal(loader.registeredFonts.size, 1);
+});

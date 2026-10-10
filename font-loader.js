@@ -246,6 +246,16 @@ class FontLoader {
     // Save catalog and version
     await this.saveCatalog(this.catalog.fonts);
     await this.setInstalledVersion(bundleVersion, manifest.version_date, manifest.bundle_sha256);
+
+    // The fresh install replaced the cached font files: any @font-face
+    // registrations still reference blob URLs holding the previous
+    // bundle's data, so drop them. Callers re-register to pick up the
+    // new files. The cache-hit path above keeps registrations because
+    // the bundle content is unchanged there.
+    for (const fontId of Array.from(this.registeredFonts.keys())) {
+      this.disposeRegistration(fontId);
+    }
+
     this.installedVersion = bundleVersion;
     this.fontsLoaded = true;
 
