@@ -193,6 +193,11 @@ await loader.registerFont('01-inter', 'Inter', {
 });
 ```
 
+Repeated registrations of the same font with the same options are
+idempotent (no duplicate `@font-face` rules or blob URLs); registering
+with different options replaces the previous registration, and
+`clearCache()` removes all registrations.
+
 #### `getFontUrl(fontId, filename)`
 Get blob URL for a font file.
 

@@ -157,3 +157,139 @@ test('load reuses cache when both version and bundle hash match', async (t) => {
   assert.deepEqual(requested, ['/bundle/manifest.json']);
   assert.deepEqual(loader.getAllFonts(), [{ id: 'cached-font' }]);
 });
+
+// ---------------------------------------------------------------------------
+// registerFont lifecycle: idempotent re-registration, replacement on option
+// change, and teardown on clearCache. These need a minimal fake DOM because
+// registerFont appends a <style> element and creates blob URLs.
+// ---------------------------------------------------------------------------
+
+function fakeBrowserEnvironment() {
+  const createdStyleElements = [];
+  const appendedStyleElements = [];
+  const createdObjectUrls = [];
+  const revokedObjectUrls = [];
+
+  const makeStyleElement = () => {
+    const el = {
+      textContent: '',
+      removed: false,
+      remove() {
+        this.removed = true;
+      },
+    };
+    createdStyleElements.push(el);
+    return el;
+  };
+
+  const head = {
+    children: appendedStyleElements,
+    appendChild(el) {
+      appendedStyleElements.push(el);
+      return el;
+    },
+  };
+
+  const originalDocument = global.document;
+  const originalURL = global.URL;
+  const originalIndexedDB = global.indexedDB;
+
+  global.document = { createElement: makeStyleElement, head };
+  global.URL = {
+    createObjectURL() {
+      const url = `blob:fake-${createdObjectUrls.length}`;
+      createdObjectUrls.push(url);
+      return url;
+    },
+    revokeObjectURL(url) {
+      revokedObjectUrls.push(url);
+    },
+  };
+  global.indexedDB = {
+    deleteDatabase() {
+      const request = {};
+      queueMicrotask(() => request.onsuccess());
+      return request;
+    },
+  };
+
+  return {
+    createdStyleElements,
+    appendedStyleElements,
+    createdObjectUrls,
+    revokedObjectUrls,
+    restore() {
+      global.document = originalDocument;
+      global.URL = originalURL;
+      global.indexedDB = originalIndexedDB;
+    },
+  };
+}
+
+class RegistrationTestLoader extends FontLoader {
+  constructor() {
+    super();
+    this.catalog = {
+      fonts: [
+        {
+          id: '01-demo',
+          name: 'Demo',
+          dir_name: '01-demo',
+          files: [{ filename: 'Demo-Regular.woff2' }],
+        },
+      ],
+    };
+  }
+
+  async getFile() {
+    return { size: 1 };
+  }
+}
+
+test('registerFont is idempotent for repeated identical registrations', async (t) => {
+  const env = fakeBrowserEnvironment();
+  t.after(() => env.restore());
+
+  const loader = new RegistrationTestLoader();
+
+  assert.equal(await loader.registerFont('01-demo'), true);
+  assert.equal(await loader.registerFont('01-demo'), true);
+  assert.equal(await loader.registerFont('01-demo', 'Demo', { weight: 'normal' }), true);
+
+  // One style element, one blob URL, and nothing revoked.
+  assert.equal(env.appendedStyleElements.length, 1);
+  assert.equal(env.createdObjectUrls.length, 1);
+  assert.deepEqual(env.revokedObjectUrls, []);
+  assert.equal(loader.registeredFonts.size, 1);
+});
+
+test('registerFont replaces the registration when its options change', async (t) => {
+  const env = fakeBrowserEnvironment();
+  t.after(() => env.restore());
+
+  const loader = new RegistrationTestLoader();
+
+  assert.equal(await loader.registerFont('01-demo'), true);
+  assert.equal(await loader.registerFont('01-demo', 'Demo', { weight: 'bold' }), true);
+
+  const [firstEl, secondEl] = env.appendedStyleElements;
+  assert.equal(firstEl.removed, true, 'superseded style element is detached');
+  assert.equal(secondEl.removed, false, 'current style element stays attached');
+  assert.match(secondEl.textContent, /font-weight: bold/);
+  assert.deepEqual(env.revokedObjectUrls, [env.createdObjectUrls[0]]);
+  assert.equal(loader.registeredFonts.size, 1);
+});
+
+test('clearCache removes registrations and revokes their blob URLs', async (t) => {
+  const env = fakeBrowserEnvironment();
+  t.after(() => env.restore());
+
+  const loader = new RegistrationTestLoader();
+  assert.equal(await loader.registerFont('01-demo'), true);
+
+  await loader.clearCache();
+
+  assert.equal(env.appendedStyleElements[0].removed, true);
+  assert.deepEqual(env.revokedObjectUrls, env.createdObjectUrls);
+  assert.equal(loader.registeredFonts.size, 0);
+});

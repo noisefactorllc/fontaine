@@ -26,6 +26,9 @@ class FontLoader {
     this.catalog = null;
     this.installedVersion = null;
     this.fontsLoaded = false;
+    // fontId -> { signature, styleElement, objectUrl } for @font-face
+    // registrations, so repeat registrations reuse instead of leaking.
+    this.registeredFonts = new Map();
   }
 
   // =========================================================================
@@ -413,6 +416,23 @@ class FontLoader {
   }
 
   /**
+   * Remove a font's @font-face registration: detach its style element and
+   * release its blob URL.
+   * @param {string} fontId - Font ID
+   */
+  disposeRegistration(fontId) {
+    const entry = this.registeredFonts.get(fontId);
+    if (!entry) return;
+    if (entry.styleElement && typeof entry.styleElement.remove === 'function') {
+      entry.styleElement.remove();
+    }
+    if (entry.objectUrl) {
+      URL.revokeObjectURL(entry.objectUrl);
+    }
+    this.registeredFonts.delete(fontId);
+  }
+
+  /**
    * Register a font with CSS @font-face.
    * @param {string} fontId - Font ID
    * @param {string} fontFamily - CSS font-family name to use
@@ -424,6 +444,19 @@ class FontLoader {
     if (!font) return false;
 
     fontFamily = fontFamily || font.name;
+    const weight = options.weight || 'normal';
+    const style = options.style || 'normal';
+    const display = options.display || 'swap';
+
+    // Registering the same font id twice with the same effective
+    // @font-face options is idempotent: reuse the existing rule and blob
+    // URL instead of appending a duplicate style element and leaking a
+    // new object URL on every call.
+    const signature = `${fontFamily}|${weight}|${style}|${display}`;
+    const existing = this.registeredFonts.get(fontId);
+    if (existing && existing.signature === signature) {
+      return true;
+    }
 
     // Find best font file - prefer WOFF2, regular weight, non-italic
     const file = this.findBestPreviewFile(font.files, '.woff2') ||
@@ -438,7 +471,7 @@ class FontLoader {
     if (!blob) return false;
 
     const url = URL.createObjectURL(blob);
-    
+
     // Determine format based on extension
     const ext = file.filename.split('.').pop().toLowerCase();
     let format;
@@ -449,18 +482,28 @@ class FontLoader {
       default: format = 'truetype';
     }
 
-    const style = document.createElement('style');
-    style.textContent = `
+    const styleEl = document.createElement('style');
+    styleEl.textContent = `
       @font-face {
         font-family: '${fontFamily}';
         src: url('${url}') format('${format}');
-        font-weight: ${options.weight || 'normal'};
-        font-style: ${options.style || 'normal'};
-        font-display: ${options.display || 'swap'};
+        font-weight: ${weight};
+        font-style: ${style};
+        font-display: ${display};
       }
     `;
-    document.head.appendChild(style);
-    
+    document.head.appendChild(styleEl);
+
+    // The previous registration (if any) is superseded: drop its style
+    // element and release its blob URL so re-registering with different
+    // options does not leak either.
+    this.disposeRegistration(fontId);
+    this.registeredFonts.set(fontId, {
+      signature,
+      styleElement: styleEl,
+      objectUrl: url
+    });
+
     return true;
   }
 
@@ -481,6 +524,12 @@ class FontLoader {
    * Deletes the entire IndexedDB database.
    */
   async clearCache() {
+    // Tear down @font-face registrations: their blob URLs point into the
+    // cache being deleted, so they must not survive clearCache().
+    for (const fontId of Array.from(this.registeredFonts.keys())) {
+      this.disposeRegistration(fontId);
+    }
+
     // Close existing connection
     if (this.db) {
       this.db.close();
