@@ -4,8 +4,8 @@ name: Deploy Pages
 # font build. Scaffold is the sole authority for fonts.noisefactor.io
 # deploys: this workflow just fires the workflow_dispatch at scaffold's
 # static-site-release, which clones this repo at the pushed SHA, stages
-# index.html + demo/, rsyncs to ~/sites/fonts.noisefactor.io/content on
-# nf-toronto, flushes the CDN edges, and verifies through the edge.
+# index.html + demo/, rsyncs to the production web server, flushes the
+# CDN edges, and verifies through the edge.
 #
 # Keeping the SSH key + server IP on the scaffold side means this
 # public repo carries no deploy secrets — only the EHSRE app private

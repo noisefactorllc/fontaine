@@ -5,9 +5,9 @@ name: Deploy Site (Full Rebuild)
 # for fonts.noisefactor.io deploys, so the build itself now runs there
 # — this workflow just fires the workflow_dispatch at scaffold's
 # static-site-release, which clones this repo at the tagged SHA, runs
-# that same build, rsyncs dist/site/ (excluding bundle/) to
-# ~/sites/fonts.noisefactor.io/content on nf-toronto, flushes the CDN
-# edges, and verifies through the edge.
+# that same build, rsyncs dist/site/ (excluding bundle/) to the
+# production web server, flushes the CDN edges, and verifies through
+# the edge.
 #
 # Keeping the SSH key + server IP on the scaffold side means this
 # public repo carries no deploy secrets — only the EHSRE app private
