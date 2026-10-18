@@ -116,6 +116,20 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Check the release dispatch configuration
+        if: success()
+        env:
+          RELEASE_REPOSITORY: ${{ secrets.RELEASE_REPOSITORY }}
+          STATIC_SITE_RELEASE_WORKFLOW: ${{ secrets.STATIC_SITE_RELEASE_WORKFLOW }}
+        run: |
+          missing=""
+          [ -n "$RELEASE_REPOSITORY" ] || missing="$missing RELEASE_REPOSITORY"
+          [ -n "$STATIC_SITE_RELEASE_WORKFLOW" ] || missing="$missing STATIC_SITE_RELEASE_WORKFLOW"
+          if [ -n "$missing" ]; then
+            echo "::error::The release dispatch is not configured. Empty or unset secret(s):$missing"
+            exit 1
+          fi
+
       - name: Generate app token
         if: success()
         id: app-token
@@ -124,29 +138,31 @@ jobs:
           client-id: Iv23liy6T6BW0BXuZRzx
           private-key: ${{ secrets.EHSRE_APP_PRIVATE_KEY }}
           owner: noisefactorllc
-          repositories: scaffold
+          repositories: ${{ secrets.RELEASE_REPOSITORY }}
 
-      - name: Dispatch scaffold static-site-release for the font bundle
+      - name: Dispatch the site release for the font bundle
         if: success()
         env:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-        # Scaffold is the sole authority for fonts.noisefactor.io
-        # deploys: it clones this repo at the tagged SHA, rebuilds the
-        # bundle, rsyncs it into content/bundle/, flushes the CDN edges
-        # and verifies through the edge. This repo keeps no deploy
-        # secrets — only the EHSRE app key, scoped to dispatching
-        # scaffold workflows.
+          RELEASE_REPOSITORY: ${{ secrets.RELEASE_REPOSITORY }}
+          STATIC_SITE_RELEASE_WORKFLOW: ${{ secrets.STATIC_SITE_RELEASE_WORKFLOW }}
+        # The site release workflow is the sole authority for
+        # fonts.noisefactor.io deploys: it clones this repo at the tagged
+        # SHA, rebuilds the bundle, rsyncs it into content/bundle/, flushes
+        # the CDN edges and verifies through the edge. This repo keeps no
+        # deploy secrets — only the GitHub App key, scoped to dispatching
+        # release workflows.
         #
         # Note the bundle is therefore built twice from one tag: once
-        # here for the GitHub Release assets above, once on scaffold
+        # here for the GitHub Release assets above, once by the release
         # for the CDN. download_fonts.py tracks upstream "latest"
         # releases and manifest.json stamps a build timestamp, so the
         # two are same-SHA but not byte-identical. The Release asset is
         # the pinned download; the CDN copy is the live one.
         run: |
-          gh workflow run static-site-release.yml \
-            --repo noisefactorllc/scaffold \
+          gh workflow run "$STATIC_SITE_RELEASE_WORKFLOW" \
+            --repo "$GITHUB_REPOSITORY_OWNER/$RELEASE_REPOSITORY" \
             --ref main \
             -f site=fontaine-bundle \
             -f sha=${{ github.sha }}
-          echo "Dispatched scaffold static-site-release for fontaine-bundle @ ${{ github.sha }}"
+          echo "Dispatched the site release for fontaine-bundle @ ${{ github.sha }}"
