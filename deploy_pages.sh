@@ -8,15 +8,15 @@ SITE_DIR="$SCRIPT_DIR/dist/site"
 # Build site first
 python3 "$SCRIPT_DIR/build_site.py"
 
-# Read server from .scaffold-host or fall back to env
-if [ -f "$SCRIPT_DIR/.scaffold-host" ]; then
-    HOST=$(cat "$SCRIPT_DIR/.scaffold-host")
+# Read server from .deploy-host or fall back to env
+if [ -f "$SCRIPT_DIR/.deploy-host" ]; then
+    HOST=$(cat "$SCRIPT_DIR/.deploy-host")
 else
-    HOST="${SCAFFOLD_HOST:-}"
+    HOST="${DEPLOY_HOST:-}"
 fi
 
 if [ -z "$HOST" ]; then
-    echo "Set SCAFFOLD_HOST or create .scaffold-host with deploy@host"
+    echo "Set DEPLOY_HOST or create .deploy-host with deploy@host"
     exit 1
 fi
 
