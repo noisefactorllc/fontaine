@@ -61,18 +61,17 @@ jobs:
             pip install -r requirements-dev.txt
           fi
 
-      - name: Install project (optional — monolith repos may not be pip packages)
-        id: install_project
-        continue-on-error: true
+      # A repository without a [project] table skips the editable install. One with
+      # it fails the job when it cannot install, rather than skipping its tests.
+      - name: Install project (when the repository is a pip package)
         run: |
           if [ -f pyproject.toml ] && grep -qE '^\[project\]' pyproject.toml; then
-            pip install -e ".[dev]" 2>/dev/null || pip install -e .
+            pip install -e ".[dev]"
           else
             echo "No [project] table — skipping editable install"
           fi
 
       - name: Run pytest
-        if: steps.install_project.outcome == 'success'
         run: |
           if [ -d tests ] || grep -qE '^\[tool\.pytest' pyproject.toml 2>/dev/null; then
             pip install pytest
